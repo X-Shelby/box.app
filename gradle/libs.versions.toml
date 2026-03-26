@@ -1,0 +1,80 @@
+[versions]
+agp = "9.1.0-rc01"
+kotlin = "2.3.20-RC"
+compileSdk = "36"
+minSdk = "28"
+targetSdk = "36"
+
+coreKtx = "1.18.0-rc01"
+activityCompose = "1.13.0-rc01"
+composeBom = "2026.02.01"
+material = "1.14.0-alpha09"
+okhttp = "5.3.2"
+appcompat = "1.7.1"
+sora = "0.24.4"
+
+lifecycle = "2.10.0"
+
+kyantBackdrop = "2.0.0-alpha03"
+kyantShapes = "1.2.0"
+
+coil = "3.4.0"
+
+dexlib2 = "2.5.2"
+
+aboutLibraries = "14.0.0-b02"
+
+junit = "4.13.2"
+androidxJunit = "1.3.0"
+espressoCore = "3.6.1"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+
+material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-compose-material-icons-core = { group = "androidx.compose.material", name = "material-icons-core" }
+androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
+
+androidx-compose-foundation = { group = "androidx.compose.foundation", name = "foundation" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-material-ripple = { group = "androidx.compose.material", name = "material-ripple" }
+
+kyant-backdrop = { group = "io.github.kyant0", name = "backdrop", version.ref = "kyantBackdrop" }
+kyant-shapes = { group = "io.github.kyant0", name = "shapes", version.ref = "kyantShapes" }
+
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+
+sora-bom = { group = "io.github.rosemoe", name = "editor-bom", version.ref = "sora" }
+sora-editor = { group = "io.github.rosemoe", name = "editor", version.ref = "sora" }
+sora-language-textmate = { group = "io.github.rosemoe", name = "language-textmate", version.ref = "sora" }
+
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil = { group = "io.coil-kt.coil3", name = "coil", version.ref = "coil" }
+
+dexlib2 = { group = "org.smali", name = "dexlib2", version.ref = "dexlib2" }
+
+aboutlibraries-core = { module = "com.mikepenz:aboutlibraries-core", version.ref = "aboutLibraries" }
+aboutlibraries-compose-core = { module = "com.mikepenz:aboutlibraries-compose-core", version.ref = "aboutLibraries" }
+aboutlibraries-compose-m3 = { module = "com.mikepenz:aboutlibraries-compose-m3", version.ref = "aboutLibraries" }
+
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-test-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxJunit" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+
+[plugins]
+androidApplication = { id = "com.android.application", version.ref = "agp" }
+kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+
+aboutLibrariesAndroid = { id = "com.mikepenz.aboutlibraries.plugin.android", version.ref = "aboutLibraries" }
+aboutLibraries = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutLibraries" }

@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<qs-tile xmlns:android="http://schemas.android.com/apk/res/android"
+    android:icon="@drawable/ic_qs_box"
+    android:label="@string/qs_tile_service_label" />

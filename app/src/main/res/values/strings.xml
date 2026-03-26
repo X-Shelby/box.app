@@ -1,0 +1,711 @@
+<resources>
+    <!-- App -->
+    <string name="app_name">Box</string>
+
+    <!-- Common actions -->
+    <string name="action_back">Back</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_refresh_page">Refresh page</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_more">More</string>
+    <string name="action_add">Add</string>
+    <string name="action_save">Save</string>
+
+    <string name="web_action_clear_cache">Clear cache</string>
+    <string name="web_action_cache_cleared">Cache cleared</string>
+    <string name="web_action_cache_clear_failed">Failed to clear cache</string>
+    <string name="web_action_clear_cache_confirm">Clear</string>
+    <string name="web_action_clear_cache_confirm_message">This will clear WebView cache and cookies. Continue?</string>
+
+    <string name="config_editor_discard_changes_title">Discard changes?</string>
+    <string name="config_editor_discard_changes_message">You have unsaved changes that will be lost.</string>
+    <string name="config_editor_discard">Discard</string>
+    <string name="action_apply">Apply</string>
+    <string name="action_run">Run</string>
+    <string name="action_search">Search</string>
+
+    <string name="common_on">On</string>
+    <string name="common_off">Off</string>
+
+    <string name="app_back_again_to_exit">Press back again to exit</string>
+
+    <string name="main_tab_home">Home</string>
+    <string name="main_tab_tools">Tools</string>
+    <string name="main_tab_settings">Settings</string>
+
+    <string name="onboarding_title">Welcome</string>
+    <string name="onboarding_agreement_title">Agreement &amp; disclaimer</string>
+    <string name="onboarding_disclaimer_body">This app is for research and learning purposes only. It may change device network behavior. You are responsible for how you use it and for complying with local laws and rules.</string>
+    <string name="onboarding_tos_accept">I have read and agree to the terms above</string>
+    <string name="onboarding_go_to_tools">Open Tools</string>
+    <string name="onboarding_go_to_settings">Open Settings</string>
+    <string name="onboarding_permissions_title">Permissions</string>
+    <string name="onboarding_permissions_open_settings">System settings</string>
+    <string name="onboarding_perm_request">Grant</string>
+    <string name="onboarding_perm_root_title">Root access</string>
+    <string name="onboarding_perm_root_desc">Required. Used to control Box service and apply system network rules.</string>
+    <string name="onboarding_perm_notifications_title">Notifications</string>
+    <string name="onboarding_perm_notifications_desc">Optional. Only requested when you enable notification-related features.</string>
+    <string name="onboarding_perm_apps_title">Installed apps list</string>
+    <string name="onboarding_perm_apps_desc">Optional. Used for app list allow/block rules. On some systems, you need to manually grant “installed apps list” access in system settings.</string>
+    <string name="onboarding_perm_wifi_title">Wi‑Fi matching</string>
+    <string name="onboarding_perm_wifi_desc">Optional. Location / Nearby devices permissions may be required for scanning nearby Wi‑Fi and hotspots.</string>
+
+    <string name="onboarding_usage_title">How to use</string>
+    <string name="onboarding_usage_body">On the Home page, the service status card contains a small panel on the right where you can switch Core, Mode, and IPv6 (requires the service to be stopped).\n\nIn Network Control:\n- Tap the icon before a row to scan nearby Wi‑Fi. Or scan devices connected to your hotspot</string>
+    <string name="onboarding_tips_title">Usage tips</string>
+    <string name="onboarding_tips_body">It is recommended to stop the service before updating.\n\nTools:\n- Update Core / Subscription / WebUI / CNIP: tap the right icon to download updates\n\nSettings:\n- Check for module updates at the module version</string>
+    <string name="onboarding_finish">Finish</string>
+
+    <!-- Quick Settings / Foreground service -->
+    <string name="qs_tile_service_label">Box Service</string>
+    <string name="service_notification_channel_name">Box Service</string>
+    <string name="service_status_running">Service running</string>
+    <string name="service_status_stopped">Service stopped</string>
+    <string name="service_status_checking">Service checking</string>
+    <string name="service_status_starting">Service starting</string>
+    <string name="service_status_stopping">Service stopping</string>
+    <string name="service_status_restarting">Service restarting</string>
+    <string name="service_action_stop">Stop</string>
+    <string name="service_action_restart">Restart</string>
+
+    <!-- Panel -->
+    <string name="panel_title">Panel</string>
+    <string name="panel_sheet_title">Panels</string>
+    <string name="panel_sheet_add_title">Add panel</string>
+    <string name="panel_sheet_field_name">Name</string>
+    <string name="panel_sheet_field_url">URL</string>
+    <string name="panel_local_name">Local</string>
+    <string name="panel_error_name_required">Name is required</string>
+    <string name="panel_error_url_invalid">URL is invalid</string>
+
+    <!-- Home -->
+    <string name="home_env_btn_skip">Skip</string>
+    <string name="home_env_btn_exit">Exit</string>
+    <string name="home_env_btn_install">Install</string>
+    <string name="home_env_btn_ok">OK</string>
+    <string name="home_env_title_root_required">Root required</string>
+    <string name="home_env_title_module_missing">Module missing</string>
+    <string name="home_env_title_environment_missing">Environment missing</string>
+    <string name="home_env_body_root_required">This app requires root access to control Box service.</string>
+    <string name="home_env_body_module_missing">Box module is not installed.</string>
+    <string name="home_env_body_scripts_missing">Box scripts are missing.</string>
+    <string name="home_env_check_failed">Environment check failed</string>
+    <string name="home_environment_not_ready">Environment not ready</string>
+    <string name="home_please_wait">Please wait…</string>
+    <string name="home_tap_start_to_enable">Tap Start to enable</string>
+
+    <string name="home_header_title">Box</string>
+    <string name="home_header_subtitle">Status &amp; metrics</string>
+    <string name="home_header_edit">Edit</string>
+
+    <string name="home_layout_title">Edit home layout</string>
+    <string name="home_layout_visible">Visible</string>
+    <string name="home_layout_hidden">Hidden</string>
+    <string name="home_layout_section_hero">Service</string>
+    <string name="home_layout_section_quick">Quick actions</string>
+    <string name="home_layout_section_latency">Latency</string>
+    <string name="home_layout_section_grid">Metrics</string>
+
+    <string name="home_layout_metrics_title">Metrics cards</string>
+    <string name="home_layout_hidden_metrics_title">Hidden metrics cards</string>
+
+    <string name="home_quick_panel_title">Panel</string>
+    <string name="home_quick_panel_subtitle">Web UI</string>
+    <string name="home_quick_subs_title">Subs</string>
+    <string name="home_quick_subs_subtitle">Manage</string>
+    <string name="home_quick_logs_title">Logs</string>
+    <string name="home_quick_logs_subtitle">Inspect</string>
+
+    <string name="home_latency_title">Latency</string>
+    <string name="home_latency_baidu">Baidu</string>
+    <string name="home_latency_cloudflare">Cloudflare</string>
+    <string name="home_latency_google">Google</string>
+    <string name="home_latency_badge_test">TEST</string>
+    <string name="home_latency_badge_ok">OK</string>
+    <string name="home_latency_badge_down">DOWN</string>
+    <string name="home_latency_badge_part">PART</string>
+
+    <string name="home_card_ip">IP</string>
+    <string name="home_card_net_speed">Net Speed</string>
+    <string name="home_card_subscription">Subscription</string>
+    <string name="home_card_system">System</string>
+    <string name="home_ip_badge_lan">LAN</string>
+    <string name="home_ip_badge_pub">PUB</string>
+    <string name="home_ip_badge_pub_with_flag">PUB %1$s</string>
+    <string name="home_ip_geo_sheet_title">Public IP details</string>
+    <string name="home_ip_geo_sheet_subtitle">IPv4 and IPv6 detection details</string>
+    <string name="home_ip_geo_ipv4_title">IPv4</string>
+    <string name="home_ip_geo_ipv6_title">IPv6</string>
+    <string name="home_ip_geo_loading">Loading...</string>
+    <string name="home_ip_geo_unavailable">Unavailable</string>
+    <string name="home_ip_geo_field_ip">IP</string>
+    <string name="home_ip_geo_field_location">Location</string>
+    <string name="home_ip_geo_field_asn">ASN</string>
+    <string name="home_ip_geo_field_asn_org">asn_organization</string>
+    <string name="home_ip_geo_field_isp">ISP</string>
+    <string name="home_ip_geo_field_organization">organization</string>
+    <string name="home_net_up_unknown">Up -</string>
+    <string name="home_net_up_value">Up %1$s</string>
+
+    <string name="home_subscription_total">%1$s Total</string>
+
+    <string name="home_service_status_running">Running</string>
+    <string name="home_service_status_unavailable">Unavailable</string>
+    <string name="home_service_status_stopped">Stopped</string>
+    <string name="home_service_status_starting">Starting</string>
+    <string name="home_service_status_stopping">Stopping</string>
+    <string name="home_service_status_restarting">Restarting</string>
+    <string name="home_service_status_checking">Checking</string>
+
+    <string name="settings_latency_targets_title">Latency Targets</string>
+    <string name="settings_latency_targets_subtitle">Customize name and URL for latency tests</string>
+    <string name="settings_latency_target_name">Name</string>
+    <string name="settings_latency_target_url">URL</string>
+    <string name="settings_latency_reset">Reset</string>
+    <string name="settings_latency_save">Save</string>
+
+    <string name="home_service_status_title">Service Status</string>
+
+    <string name="home_core_label">Core</string>
+    <string name="home_mode_label">Mode</string>
+    <string name="home_ipv6_label">IPv6</string>
+    <string name="home_placeholder_dash">—</string>
+
+    <string name="home_action_start">Start</string>
+    <string name="home_action_stop">Stop</string>
+    <string name="home_action_reload">Restart</string>
+
+    <string name="home_action_restart_menu">Restart</string>
+    <string name="home_action_reload_config">Reload</string>
+    <string name="home_reload_config_success">Reloaded</string>
+    <string name="home_reload_config_failed">Reload failed</string>
+
+    <string name="home_uptime_hours_minutes">Uptime · %1$dh %2$dm</string>
+    <string name="home_uptime_minutes">Uptime · %1$dm</string>
+    <string name="home_uptime_less_than_minute">Uptime · &lt;1m</string>
+
+    <string name="home_badge_service">SRV</string>
+    <string name="home_badge_ip">IP</string>
+    <string name="home_badge_net">NET</string>
+    <string name="home_badge_ms">MS</string>
+    <string name="home_badge_sub">SUB</string>
+    <string name="home_badge_sys">SYS</string>
+
+    <string name="home_sheet_core_title">Core</string>
+    <string name="home_sheet_core_subtitle">Select active core</string>
+    <string name="home_sheet_network_mode_title">Network mode</string>
+    <string name="home_sheet_network_mode_subtitle">Select routing mode</string>
+    <string name="home_sheet_ipv6_title">IPv6</string>
+    <string name="home_sheet_ipv6_subtitle">Enable or disable</string>
+    <string name="home_sheet_current">Current</string>
+    <string name="home_sheet_tap_to_select">Tap to select</string>
+
+    <!-- SubStore -->
+    <string name="substore_title">SubStore</string>
+    <string name="substore_loading">Loading SubStore...</string>
+    <string name="substore_unavailable">SubStore unavailable</string>
+    <string name="substore_port_not_found">SubStore port not found</string>
+    <string name="substore_panel_sheet_title">Panels</string>
+    <string name="substore_panel_sheet_add_title">Add panel</string>
+    <string name="substore_panel_sheet_field_name">Name</string>
+    <string name="substore_panel_sheet_field_url">URL</string>
+    <string name="substore_panel_local_name">Local</string>
+    <string name="substore_panel_error_name_required">Name is required</string>
+    <string name="substore_panel_error_url_invalid">URL is invalid</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_subtitle">App preferences</string>
+    <string name="settings_section_appearance">Appearance</string>
+    <string name="settings_section_appearance_subtitle">Theme &amp; display</string>
+    <string name="settings_theme_mode">Theme mode</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_theme_follow_system">Follow system</string>
+    <string name="settings_system_bars">System bars</string>
+    <string name="settings_system_bars_transparent">Transparent</string>
+    <string name="settings_system_bars_opaque">Opaque</string>
+    <string name="settings_system_bars_status">status</string>
+    <string name="settings_system_bars_navigation">navigation</string>
+    <string name="settings_system_bars_subtitle">%1$s %2$s, %3$s %4$s</string>
+    <string name="settings_system_bars_dialog_title">System Bars</string>
+    <string name="settings_system_bars_opaque_status_title">Opaque status bar</string>
+    <string name="settings_system_bars_opaque_navigation_title">Opaque navigation bar</string>
+    <string name="settings_system_bars_opaque_subtitle">Solid color (not immersive)</string>
+    <string name="settings_true_black">True black</string>
+    <string name="settings_true_black_subtitle">Make dark theme backgrounds pure black</string>
+    <string name="settings_liquid_glass_translucent">Liquid glass translucency</string>
+    <string name="settings_liquid_glass_translucent_subtitle">On: translucent glass. Off: blur only.</string>
+    <string name="settings_liquid_glass_lens_strength">Lens strength</string>
+    <string name="settings_liquid_glass_lens_strength_subtitle">Adjust glass refraction intensity</string>
+    <string name="settings_liquid_glass_blur_strength">Blur strength</string>
+    <string name="settings_liquid_glass_blur_strength_subtitle">Adjust glass blur intensity</string>
+    <string name="settings_bottom_sheet_blur">Bottom sheet blur</string>
+    <string name="settings_bottom_sheet_blur_subtitle">On: glass blur. Off: solid background.</string>
+    <string name="settings_ui_scale">UI scale (%1$d%%)</string>
+    <string name="settings_ui_scale_subtitle">Scale the entire interface (80% - 120%)</string>
+    <string name="settings_appearance_more">Other appearance settings</string>
+    <string name="settings_appearance_more_subtitle">More visual options</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_subtitle">App language</string>
+
+    <string name="settings_section_service">Service</string>
+    <string name="settings_section_service_subtitle">Startup &amp; runtime</string>
+    <string name="settings_auto_start">Auto start</string>
+    <string name="settings_auto_start_subtitle">Auto start Box service on boot</string>
+    <string name="settings_accelerated_download">Accelerated download</string>
+    <string name="settings_accelerated_download_subtitle">Use GitHub mirror</string>
+
+    <string name="settings_section_subscription">Subscription</string>
+    <string name="settings_section_subscription_subtitle">Data source</string>
+    <string name="settings_use_clash_api">Use Clash API</string>
+    <string name="settings_providers_mode">Providers mode</string>
+    <string name="settings_url_mode">URL mode</string>
+
+    <string name="settings_section_net_speed">Net Speed</string>
+    <string name="settings_core_api_mode">Core API mode</string>
+    <string name="settings_system_mode">System mode</string>
+    <string name="settings_filter_chains">Filter connection types</string>
+    <string name="settings_filter_chains_subtitle">Comma or newline separated (e.g. DIRECT,REJECT)</string>
+
+    <string name="settings_section_misc">Misc</string>
+    <string name="settings_section_misc_subtitle">Other</string>
+
+    <string name="config_editor_search_hint">Search keyword</string>
+    <string name="settings_open_panel_on_launch">Open Panel on launch</string>
+    <string name="settings_open_panel_on_launch_subtitle">Start on Panel screen</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_notifications_subtitle">Enable notifications</string>
+
+    <string name="settings_backup_restore_title">Backup &amp; Restore</string>
+    <string name="settings_backup_restore_subtitle">Export / import module and app rules</string>
+    <string name="settings_backup_restore_tab_backup">Backup</string>
+    <string name="settings_backup_restore_tab_restore">Restore</string>
+    <string name="settings_backup_restore_scope_title">Scope</string>
+    <string name="settings_backup_restore_scope_modules">Modules</string>
+    <string name="settings_backup_restore_scope_apps">Apps</string>
+    <string name="settings_backup_restore_scope_both">Both</string>
+    <string name="settings_backup_restore_scope_modules_only">Only restore modules</string>
+    <string name="settings_backup_restore_scope_apps_only">Only restore apps</string>
+    <string name="settings_backup_restore_export">Export</string>
+    <string name="settings_backup_restore_restore">Restore</string>
+    <string name="settings_backup_restore_file_title">Backup file</string>
+    <string name="settings_backup_restore_file_pick">Tap to pick a .zip backup</string>
+    <string name="settings_backup_restore_detected">Detected: %1$s</string>
+    <string name="settings_backup_restore_detect_modules">Modules</string>
+    <string name="settings_backup_restore_detect_apps">Apps</string>
+    <string name="settings_backup_restore_detect_both">Modules + Apps</string>
+    <string name="settings_backup_restore_detect_unknown">Unknown</string>
+    <string name="settings_backup_restore_export_ok">Export completed</string>
+    <string name="settings_backup_restore_export_failed">Export failed</string>
+    <string name="settings_backup_restore_restore_ok">Restore completed</string>
+    <string name="settings_backup_restore_failed">Operation failed</string>
+    <string name="settings_backup_restore_failed_detect">Failed to detect backup</string>
+    <string name="settings_backup_restore_exported">Exported: %1$s</string>
+    <string name="settings_backup_restore_confirm_body">This will restore: %1$s. Continue?</string>
+    <string name="settings_backup_restore_confirm_continue">Continue</string>
+
+    <string name="settings_section_about">About</string>
+    <string name="settings_section_about_subtitle">APP &amp; module info</string>
+    <string name="settings_version">Version</string>
+    <string name="settings_open_source_licenses">Open Source Licenses</string>
+    <string name="settings_open_source_licenses_subtitle">Third-party libraries and notices</string>
+    <string name="settings_module_not_installed">Not installed</string>
+    <string name="settings_failed_check_updates">Failed to check for updates</string>
+    <string name="settings_already_up_to_date">You are already up to date</string>
+
+    <!-- Dialogs / Theme -->
+    <string name="theme_dialog_title">Theme Mode</string>
+    <string name="theme_light_desc">Always use light theme</string>
+    <string name="theme_dark_desc">Always use dark theme</string>
+    <string name="theme_system_desc">Match system settings</string>
+
+    <!-- Dialogs / Language -->
+    <string name="settings_language_title">Language</string>
+    <string name="settings_language_follow_system">Follow system</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_chinese">中文</string>
+    <string name="settings_language_follow_system_desc">Use system language</string>
+    <string name="settings_language_english_desc">English</string>
+    <string name="settings_language_chinese_desc">中文</string>
+
+    <!-- Tools -->
+    <string name="tools_title">Tools</string>
+    <string name="tools_subtitle">Module preferences</string>
+    <string name="tools_section_config_title">Config</string>
+    <string name="tools_section_config_subtitle">Manage &amp; select active config</string>
+    <string name="tools_section_apps_title">Apps</string>
+    <string name="tools_section_apps_subtitle">Proxy mode &amp; app rules</string>
+    <string name="tools_section_network_control_title">Network control</string>
+    <string name="tools_section_network_control_subtitle">Wi-Fi based module control</string>
+    <string name="tools_section_logs_title">Logs</string>
+    <string name="tools_section_logs_subtitle">Inspect runtime logs</string>
+    <string name="tools_section_update_title">Update</string>
+    <string name="tools_section_update_subtitle">Module content update</string>
+
+    <string name="tools_row_manage">Manage</string>
+    <string name="tools_row_select">Select</string>
+    <string name="tools_row_view">View</string>
+    <string name="tools_row_open">Open</string>
+    <string name="tools_row_browse_search_create">Browse / search / create</string>
+    <string name="tools_row_choose_active_config">Choose active config</string>
+    <string name="tools_row_manage_app_rules">Manage app rules</string>
+    <string name="tools_row_open_unified_logs">Open logs view</string>
+    <string name="tools_row_network_control_subtitle">Configure Wi-Fi rules</string>
+
+    <string name="tools_update_target_core">Core update</string>
+    <string name="tools_update_target_subscription">Subscription</string>
+    <string name="tools_update_target_webui">WebUI</string>
+    <string name="tools_update_target_cnip">CNIP</string>
+    <string name="tools_update_subtitle_core">Choose which core to update</string>
+    <string name="tools_update_subtitle_subscription">Providers · rules</string>
+    <string name="tools_update_subtitle_webui">Update dashboard assets</string>
+    <string name="tools_update_subtitle_cnip">China IP database</string>
+    <string name="tools_update_sheet_title">Core update</string>
+    <string name="tools_update_sheet_subtitle">Choose which core to update</string>
+    <string name="tools_update_started">Updating %1$s...</string>
+    <string name="tools_update_completed">Update completed: %1$s</string>
+    <string name="tools_update_failed">Update failed</string>
+    <string name="tools_update_completed_subscription">Update completed: Subscription</string>
+    <string name="tools_update_completed_webui">Update completed: WebUI</string>
+    <string name="tools_update_completed_cnip">Update completed: CNIP</string>
+    <string name="tools_update_tip_title">Important</string>
+    <string name="tools_update_tip_body">To apply settings correctly, go back to this page, tap the download/update icon on the right of the item, then restart the service.</string>
+
+    <string name="action_update">Update</string>
+
+    <!-- Tools / Update -->
+    <string name="tools_update_back_compact">&lt; Back</string>
+
+    <!-- Tools / Subscription -->
+    <string name="tools_subscription_load_failed">Load failed</string>
+    <string name="tools_subscription_save_failed">Save failed</string>
+    <string name="tools_subscription_section_general_title">General</string>
+    <string name="tools_subscription_section_general_subtitle">Auto update &amp; refresh behavior</string>
+    <string name="tools_subscription_renew_title">Override config</string>
+    <string name="tools_subscription_renew_subtitle">Overwrite with first Mihomo URL</string>
+    <string name="tools_subscription_update_subscription_title">Update subscription</string>
+    <string name="tools_subscription_update_subscription_subtitle">Refresh providers on schedule</string>
+    <string name="tools_subscription_run_crontab_title">Run crontab</string>
+    <string name="tools_subscription_run_crontab_subtitle">Allow scheduled tasks</string>
+    <string name="tools_subscription_interval_title">Interval</string>
+    <string name="tools_subscription_interval_placeholder">e.g. 6h / 12h / 1d</string>
+    <string name="tools_subscription_mihomo_urls_title">Mihomo URLs</string>
+    <string name="tools_subscription_mihomo_configs_title">Mihomo configs</string>
+    <string name="tools_subscription_paths_title">Paths</string>
+    <string name="tools_subscription_paths_subtitle">Core provide path &amp; URLs</string>
+    <string name="tools_subscription_mihomo_provide_path_title">Mihomo provide path</string>
+    <string name="tools_subscription_sing_box_url_title">Sing-box URL</string>
+    <string name="tools_subscription_hint_enter_url">Enter URL</string>
+    <string name="tools_subscription_hint_enter_filename">Enter filename (e.g. proxy.yaml)</string>
+    <string name="tools_subscription_path_placeholder">/data/adb/box/...</string>
+    <string name="tools_subscription_url_placeholder">https://...</string>
+    <string name="tools_subscription_append_item">Append a new item</string>
+
+    <string name="tools_subscription_key_interva_update_subtitle">Update interval</string>
+    <string name="tools_subscription_key_subscription_url_mihomo_subtitle">Mihomo subscription URLs</string>
+    <string name="tools_subscription_key_name_provide_mihomo_config_subtitle">Mihomo provided config names</string>
+    <string name="tools_subscription_key_mihomo_provide_path_subtitle">Mihomo provide path</string>
+    <string name="tools_subscription_key_subscription_url_singbox_subtitle">Sing-box subscription URL</string>
+
+    <!-- Tools / Network control -->
+    <string name="tools_network_control_section_general_title">General</string>
+    <string name="tools_network_control_section_general_subtitle">Wi-Fi based rules</string>
+    <string name="tools_network_control_enable_title">Enable network control</string>
+    <string name="tools_network_control_enable_subtitle">Master switch for Wi-Fi rules</string>
+    <string name="tools_network_control_use_on_wifi_disconnect_title">Use on Wi-Fi disconnect</string>
+    <string name="tools_network_control_use_on_wifi_disconnect_subtitle">Apply rule when Wi-Fi disconnects</string>
+    <string name="tools_network_control_use_on_wifi_title">Use on Wi-Fi connect</string>
+    <string name="tools_network_control_use_on_wifi_subtitle">Apply rule when Wi-Fi connects</string>
+    <string name="tools_network_control_enable_ssid_matching_title">Enable Wi-Fi matching (SSID/BSSID)</string>
+    <string name="tools_network_control_enable_ssid_matching_subtitle">Only apply rules for specific SSIDs/BSSIDs</string>
+    <string name="tools_network_control_enable_log_title">Enable network control log</string>
+    <string name="tools_network_control_enable_log_subtitle">Write network control logs</string>
+
+    <string name="tools_network_control_ssid_mode_title">Wi‑Fi matching list mode</string>
+    <string name="tools_network_control_ssid_mode_subtitle">Applies to both SSID list and router MAC (BSSID) list</string>
+    <string name="tools_network_control_ssid_mode_blacklist">Blacklist</string>
+    <string name="tools_network_control_ssid_mode_blacklist_subtitle">Apply on all SSIDs except listed ones</string>
+    <string name="tools_network_control_ssid_mode_whitelist">Whitelist</string>
+    <string name="tools_network_control_ssid_mode_whitelist_subtitle">Only apply on listed SSIDs</string>
+
+    <string name="tools_network_control_ssid_list_title">SSID list</string>
+    <string name="tools_network_control_ssid_list_subtitle">Add Wi-Fi names (SSID)</string>
+    <string name="tools_network_control_hint_enter_ssid">Enter SSID</string>
+    <string name="tools_network_control_bssid_list_title">Router MAC (BSSID) list</string>
+    <string name="tools_network_control_bssid_list_subtitle">Used for Wi‑Fi matching (router MAC address / BSSID)</string>
+    <string name="tools_network_control_hint_enter_bssid">Enter router MAC (BSSID) (e.g. 12:34:56:78:9A:BC)</string>
+
+    <string name="tools_network_control_hotspot_mac_title">Hotspot Client MAC Filter</string>
+    <string name="tools_network_control_hotspot_mac_subtitle">Proxy hotspot clients by MAC</string>
+    <string name="tools_network_control_hotspot_mac_enable_title">Enable MAC filter</string>
+    <string name="tools_network_control_hotspot_mac_enable_subtitle">Apply list to hotspot clients</string>
+    <string name="tools_network_control_hotspot_mac_mode_blacklist_title">Blacklist mode</string>
+    <string name="tools_network_control_hotspot_mac_mode_blacklist_subtitle">Proxy all except listed</string>
+    <string name="tools_network_control_hotspot_mac_mode_whitelist_title">Whitelist mode</string>
+    <string name="tools_network_control_hotspot_mac_mode_whitelist_subtitle">Proxy only listed</string>
+    <string name="tools_network_control_hint_enter_mac">Enter MAC (e.g. 12:34:56:78:9A:BC)</string>
+
+    <string name="tools_network_control_hotspot_mac_picker_title">Hotspot clients</string>
+    <string name="tools_network_control_hotspot_mac_picker_loading">Loading…</string>
+    <string name="tools_network_control_hotspot_mac_picker_empty">No clients</string>
+    <string name="tools_network_control_hotspot_mac_picker_error">Failed to load clients</string>
+    <string name="tools_network_control_append_item">Append a new item</string>
+    <string name="tools_network_control_wifi_picker_title">Nearby Wi-Fi</string>
+    <string name="tools_network_control_wifi_picker_loading">Scanning…</string>
+    <string name="tools_network_control_wifi_picker_empty">No Wi-Fi found</string>
+    <string name="tools_network_control_wifi_picker_error">Failed to scan Wi-Fi</string>
+    <string name="tools_network_control_wifi_picker_permission_required">Permission required to scan nearby Wi-Fi</string>
+    <string name="tools_network_control_wifi_picker_location_required">Please turn on Location to scan nearby Wi-Fi</string>
+    <string name="tools_network_control_load_failed">Load failed</string>
+    <string name="tools_network_control_save_failed">Save failed</string>
+    <string name="tools_update_core_title">Core</string>
+    <string name="tools_update_core_subtitle_choose_channel">Choose a core channel</string>
+    <string name="tools_update_core_section_title">Core</string>
+    <string name="tools_update_core_section_subtitle_selectable">Selectable</string>
+    <string name="tools_update_save_failed">Save failed</string>
+    <string name="tools_update_load_failed">Load failed</string>
+
+    <string name="tools_update_core_mihomo_subtitle">Mihomo core</string>
+    <string name="tools_update_core_mihomo_smart_subtitle">Mihomo smart core</string>
+    <string name="tools_update_core_sing_box_subtitle">Sing-box core</string>
+    <string name="tools_update_core_xray_subtitle">Xray core</string>
+    <string name="tools_update_core_v2ray_subtitle">V2Ray core</string>
+    <string name="tools_update_core_hysteria_subtitle">Hysteria core</string>
+
+    <!-- Tools / CNIP -->
+    <string name="tools_cnip_section_general_title">General</string>
+    <string name="tools_cnip_section_general_subtitle">CNIP bypass</string>
+    <string name="tools_cnip_bypass_title">Bypass CNIP</string>
+    <string name="tools_cnip_bypass_subtitle">Bypass China IP list</string>
+    <string name="tools_cnip_bypass_ipv4_title">Bypass CNIP (IPv4)</string>
+    <string name="tools_cnip_bypass_ipv4_subtitle">Only bypass IPv4 list</string>
+    <string name="tools_cnip_bypass_ipv6_title">Bypass CNIP (IPv6)</string>
+    <string name="tools_cnip_bypass_ipv6_subtitle">Only bypass IPv6 list</string>
+
+    <string name="tools_cnip_section_files_title">Files</string>
+    <string name="tools_cnip_section_files_subtitle">CNIP file paths</string>
+    <string name="tools_cnip_ipv4_file_title">IPv4 file</string>
+    <string name="tools_cnip_ipv6_file_title">IPv6 file</string>
+    <string name="tools_cnip_placeholder_path">/data/adb/box/...</string>
+
+    <string name="tools_cnip_section_sources_title">Sources</string>
+    <string name="tools_cnip_section_sources_subtitle">Download URLs</string>
+    <string name="tools_cnip_ipv4_url_title">IPv4 URL</string>
+    <string name="tools_cnip_ipv6_url_title">IPv6 URL</string>
+    <string name="tools_cnip_placeholder_url">https://...</string>
+
+    <!-- Tools / Logs -->
+    <string name="tools_logs_title">Logs</string>
+    <string name="tools_logs_loading">Loading logs...</string>
+    <string name="tools_logs_back_compact">&lt; Back</string>
+    <string name="tools_logs_auto_refresh">Auto refresh</string>
+    <string name="tools_logs_auto_refresh_on">Auto refresh ON</string>
+    <string name="tools_logs_manual_refresh">Manual refresh</string>
+    <string name="tools_logs_current_prefix">Current: %1$s • %2$s</string>
+    <string name="tools_logs_failed_load">Failed to load logs</string>
+    <string name="tools_logs_failed_read">Failed to read log</string>
+    <string name="tools_logs_failed_refresh">Failed to refresh</string>
+    <string name="tools_logs_failed_delete">Failed to delete</string>
+    <string name="tools_logs_status_available">Available</string>
+    <string name="tools_logs_status_current">Current</string>
+    <string name="tools_logs_no_files">No log files</string>
+    <string name="tools_logs_delete_dialog_title">Delete log file?</string>
+    <string name="tools_logs_delete_dialog_body">This will permanently delete %1$s from %2$s.</string>
+
+    <!-- Tools / Config -->
+    <string name="tools_config_back_compact">&lt; Back</string>
+    <string name="tools_config_menu_refresh">Refresh</string>
+    <string name="tools_config_menu_create">Create</string>
+    <string name="tools_config_menu_download">Download</string>
+    <string name="tools_config_menu_new_file">New file</string>
+    <string name="tools_config_menu_new_folder">New folder</string>
+    <string name="tools_config_search_hint">Search files and folders</string>
+    <string name="tools_config_go">Go</string>
+    <string name="tools_config_clear">Clear</string>
+    <string name="tools_config_edit">Edit</string>
+    <string name="tools_config_rename">Rename</string>
+    <string name="tools_config_delete">Delete</string>
+
+    <string name="tools_config_create_folder">Create folder</string>
+    <string name="tools_config_create_file">Create file</string>
+    <string name="tools_config_name">Name</string>
+    <string name="tools_config_create_folder_helper">Create a new folder in the current directory</string>
+    <string name="tools_config_create_file_helper">Create a new empty file</string>
+
+    <string name="tools_config_current_name">Current: %1$s</string>
+    <string name="tools_config_new_name">New name</string>
+
+    <string name="tools_config_delete_title">Delete %1$s?</string>
+    <string name="tools_config_delete_confirm">Are you sure you want to delete "%1$s"?</string>
+    <string name="tools_config_delete_folder_warning">This will delete the folder and all its contents.</string>
+    <string name="tools_config_delete_file_warning">This action cannot be undone.</string>
+
+    <string name="tools_config_files_folders_title">Files &amp; Folders</string>
+    <string name="tools_config_loading">Loading...</string>
+    <string name="tools_config_no_results_found">No results found</string>
+    <string name="tools_config_empty_directory">Empty directory</string>
+    <string name="tools_config_items_count">%1$d items</string>
+    <string name="tools_config_loading_files">Loading files...</string>
+    <string name="tools_config_parent_directory">Parent directory</string>
+    <string name="tools_config_no_files_match">No files match your search</string>
+    <string name="tools_config_directory_empty">This directory is empty</string>
+
+    <string name="tools_config_folder">Folder</string>
+    <string name="tools_config_file">File</string>
+
+    <string name="tools_config_create_config_file">Create config file</string>
+    <string name="tools_config_file_name">File name</string>
+    <string name="tools_config_supported_formats">Supported formats: .yaml, .yml, .json</string>
+
+    <string name="tools_config_download_config_from_url">Download config from URL</string>
+    <string name="tools_config_url">URL</string>
+    <string name="tools_config_url_example">https://example.com/config.yaml</string>
+    <string name="tools_config_save_as">Save as</string>
+    <string name="tools_config_download_config_hint">Download a config file from a remote URL</string>
+
+    <string name="tools_config_configuration_files">Configuration Files</string>
+    <string name="tools_config_loading_configuration_files">Loading configuration files...</string>
+    <string name="tools_config_no_config_files_found">No config files found</string>
+    <string name="tools_config_active_none">None</string>
+    <string name="tools_config_files_active_summary">%1$d files • Active: %2$s</string>
+    <string name="tools_config_core_not_found">Core not found</string>
+    <string name="tools_config_placeholder_config_yaml">config.yaml</string>
+
+    <string name="tools_config_no_configuration_files_found">No configuration files found</string>
+    <string name="tools_config_create_new_config_hint">Create a new config file to get started</string>
+    <string name="tools_config_active_configuration">Active configuration</string>
+    <string name="tools_config_tap_to_select">Tap to select</string>
+    <string name="tools_config_badge_active">ACTIVE</string>
+
+    <!-- Tools / Apps -->
+    <string name="tools_apps_title">Apps</string>
+    <string name="tools_apps_proxy_blacklist">Blacklist</string>
+    <string name="tools_apps_proxy_whitelist">Whitelist</string>
+    <string name="tools_apps_proxy_core">Core</string>
+    <string name="tools_apps_header_summary">%1$d items • %2$s • %3$d selected</string>
+    <string name="tools_apps_header_summary_core">%1$d items • Core • Ignore app rules</string>
+    <string name="tools_apps_selected">Selected</string>
+    <string name="tools_apps_others">Others (%1$d)</string>
+    <string name="tools_apps_back_compact">&lt; Back</string>
+    <string name="tools_apps_search_hint">Search apps</string>
+    <string name="tools_apps_sort_filter_cd">Sort/Filter</string>
+    <string name="tools_apps_menu_refresh">Refresh</string>
+    <string name="tools_apps_menu_smart_select">Smart select</string>
+    <string name="tools_apps_menu_select_all">Select all</string>
+    <string name="tools_apps_menu_invert">Invert</string>
+    <string name="tools_apps_no_apps">No apps</string>
+    <string name="tools_apps_no_results">No results</string>
+    <string name="tools_apps_user_fallback">User %1$d</string>
+    <string name="tools_apps_failed_update_proxy_mode">Failed to update proxy_mode</string>
+    <string name="tools_apps_selected_count">(%1$d)</string>
+    <string name="tools_apps_restart_tip_title">Restart required</string>
+    <string name="tools_apps_restart_tip_body">After saving app rules, restart the service for changes to take effect.</string>
+    <string name="tools_apps_restart_tip_body_pending">You have unsaved changes. Save first, then restart the service.</string>
+
+    <string name="tools_apps_smart_select_title">Smart select</string>
+    <string name="tools_apps_smart_select_body">Auto-select apps based on a simple heuristic for the current mode. This will update your current app selection list.</string>
+    <string name="tools_apps_smart_select_replace">Replace current</string>
+    <string name="tools_apps_smart_select_merge">Merge into current</string>
+    <string name="tools_apps_smart_selecting_title">Smart selecting...</string>
+    <string name="tools_apps_smart_selecting_analyzing">Analyzing apps</string>
+
+    <string name="tools_apps_sort_filter_title">Sort &amp; Filter</string>
+    <string name="tools_apps_sort_by">Sort by</string>
+    <string name="tools_apps_sort_name_asc">Name ↑</string>
+    <string name="tools_apps_sort_name_desc">Name ↓</string>
+    <string name="tools_apps_sort_install_asc">Install ↑</string>
+    <string name="tools_apps_sort_install_desc">Install ↓</string>
+
+    <string name="tools_apps_app_type">App type</string>
+    <string name="tools_apps_filter_all">All</string>
+    <string name="tools_apps_filter_user">User</string>
+    <string name="tools_apps_filter_system">System</string>
+
+    <string name="tools_apps_network_permission">Network permission</string>
+    <string name="tools_apps_filter_only_network">Only network</string>
+    <string name="tools_apps_filter_exclude_network">Exclude network</string>
+
+    <string name="tools_apps_user_space">User space</string>
+    <string name="tools_apps_filter_all_users">All users</string>
+    <string name="tools_apps_filter_main_only">Main only</string>
+    <string name="tools_apps_filter_work_clone">Work/Clone</string>
+    <string name="tools_apps_filter_other_users">Other users</string>
+
+    <!-- BottomSheets -->
+    <string name="bottomsheet_net_speed_title">Net Speed</string>
+    <string name="bottomsheet_net_speed_down">Down</string>
+    <string name="bottomsheet_net_speed_up">Up</string>
+    <string name="bottomsheet_net_speed_details">Details</string>
+    <string name="bottomsheet_net_speed_fastest_download">Fastest download</string>
+    <string name="bottomsheet_net_speed_fastest_upload">Fastest upload</string>
+
+    <string name="bottomsheet_subscription_go_tools">Go to Tools / Subscription to configure</string>
+    <string name="bottomsheet_subscription_none">No subscriptions</string>
+    <string name="bottomsheet_subscription_expires">Expires: %1$s</string>
+    <string name="bottomsheet_subscription_updated">Updated %1$s</string>
+    <string name="common_yesterday_time">Yday %1$s</string>
+    <string name="bottomsheet_subscription_upload">Upload</string>
+    <string name="bottomsheet_subscription_download">Download</string>
+    <string name="bottomsheet_subscription_remaining">Remaining</string>
+    <string name="bottomsheet_subscription_used">Used %1$s</string>
+    <string name="bottomsheet_subscription_total">Total %1$s</string>
+
+    <string name="bottomsheet_service_details_title">Service Details</string>
+    <string name="bottomsheet_service_details_pid">Process ID</string>
+    <string name="bottomsheet_service_details_memory">Memory</string>
+    <string name="bottomsheet_service_details_core_version">Core version</string>
+    <string name="bottomsheet_service_details_cpu_affinity">CPU Affinity</string>
+    <string name="bottomsheet_service_details_current_cpu">Current CPU</string>
+    <string name="bottomsheet_system_environment_title">System Environment</string>
+    <string name="bottomsheet_system_environment_android">Android</string>
+    <string name="bottomsheet_system_environment_kernel">Kernel Version</string>
+    <string name="bottomsheet_system_environment_ipset">IPSet</string>
+    <string name="bottomsheet_system_environment_ipset_not_supported">Not supported</string>
+    <string name="bottomsheet_system_environment_ipset_available">Available</string>
+    <string name="bottomsheet_system_environment_ipset_missing_binary">Missing binary</string>
+    <string name="bottomsheet_system_environment_total_memory">Total Memory</string>
+
+    <string name="bottomsheet_system_environment_ipset_status_not_supported">Not supported</string>
+    <string name="bottomsheet_system_environment_ipset_status_available">Available</string>
+    <string name="bottomsheet_system_environment_ipset_status_missing_binary">Missing binary</string>
+
+    <string name="bottomsheet_current_version">Current version</string>
+    <string name="bottomsheet_latest_version_title">You are using the latest version</string>
+    <string name="bottomsheet_no_updates_available">No updates are currently available</string>
+    <string name="bottomsheet_update_available">Update available</string>
+    <string name="bottomsheet_release_recommended">Recommended</string>
+    <string name="bottomsheet_release_version">Version: %1$s</string>
+    <string name="bottomsheet_release_commit">Commit: %1$s</string>
+    <string name="bottomsheet_release_date">Date: %1$s</string>
+
+    <string name="bottomsheet_release_stable">Stable</string>
+    <string name="bottomsheet_release_prerelease">Prerelease</string>
+    <string name="bottomsheet_release_stable_recommended">Stable (Recommended)</string>
+    <string name="bottomsheet_release_prerelease_recommended">Prerelease (Recommended)</string>
+    <string name="bottomsheet_release_type">Type: %1$s</string>
+    <string name="bottomsheet_release_notes">Release Notes:</string>
+    <string name="bottomsheet_release_prerelease_warning">This is a prerelease version, used for testing and debugging.</string>
+    <string name="bottomsheet_view_in_browser">View in browser</string>
+
+    <string name="bottomsheet_download_module">Download module</string>
+    <string name="bottomsheet_downloading">Downloading</string>
+    <string name="bottomsheet_no_module_asset">No module asset</string>
+    <string name="bottomsheet_download_success">Download successful</string>
+    <string name="bottomsheet_download_failed">Download failed</string>
+
+    <string name="bottomsheet_about_title">Box</string>
+    <string name="bottomsheet_about_module">Module</string>
+    <string name="bottomsheet_about_channel">Channel</string>
+    <string name="bottomsheet_about_module_version">Module Version</string>
+    <string name="bottomsheet_about_author">Author</string>
+    <string name="bottomsheet_about_value_github">GitHub</string>
+    <string name="bottomsheet_about_value_telegram">Telegram</string>
+    <string name="bottomsheet_about_value_author">boxproxy</string>
+
+    <string name="bottomsheet_release_type_prerelease">Prerelease</string>
+    <string name="bottomsheet_release_type_stable">Stable</string>
+</resources>

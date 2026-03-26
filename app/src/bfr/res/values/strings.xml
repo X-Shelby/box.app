@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BFR</string>
+
+    <string name="home_header_title">BFR</string>
+
+    <string name="bottomsheet_about_title">BFR</string>
+
+    <string name="tools_subscription_mihomo_urls_title">Clash URLs</string>
+    <string name="tools_subscription_mihomo_configs_title">Clash configs</string>
+    <string name="tools_subscription_mihomo_provide_path_title">Clash provide path</string>
+    <string name="tools_subscription_key_subscription_url_mihomo_subtitle">Clash subscription URLs</string>
+    <string name="tools_subscription_key_name_provide_mihomo_config_subtitle">Clash provided config names</string>
+    <string name="tools_subscription_key_mihomo_provide_path_subtitle">Clash provide path</string>
+
+    <string name="bottomsheet_about_value_author">taamarin, boxproxy</string>
+
+    <string name="tools_network_control_enable_ssid_matching_title">Enable Wi-Fi matching (SSID)</string>
+    <string name="tools_network_control_enable_ssid_matching_subtitle">Only apply rules for specific SSIDs</string>
+    <string name="tools_network_control_ssid_mode_subtitle">Applies to SSID list</string>
+    <string name="tools_network_control_ssid_list_subtitle">Add Wi-Fi names (SSID) for matching</string>
+</resources>

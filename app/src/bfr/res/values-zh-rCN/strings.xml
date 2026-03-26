@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BFR</string>
+
+    <string name="home_header_title">BFR</string>
+
+    <string name="bottomsheet_about_title">BFR</string>
+
+    <string name="tools_subscription_mihomo_urls_title">Clash 链接</string>
+    <string name="tools_subscription_mihomo_configs_title">Clash 配置</string>
+    <string name="tools_subscription_mihomo_provide_path_title">Clash 订阅路径</string>
+    <string name="tools_subscription_key_subscription_url_mihomo_subtitle">配置 Clash 订阅链接</string>
+    <string name="tools_subscription_key_name_provide_mihomo_config_subtitle">配置 Clash 订阅名称</string>
+    <string name="tools_subscription_key_mihomo_provide_path_subtitle">配置 Clash 订阅路径</string>
+
+    <string name="bottomsheet_about_value_author">taamarin, boxproxy</string>
+
+    <string name="tools_network_control_enable_ssid_matching_title">启用 Wi‑Fi 匹配（SSID）</string>
+    <string name="tools_network_control_enable_ssid_matching_subtitle">仅对指定 SSID 应用规则</string>
+    <string name="tools_network_control_ssid_mode_subtitle">仅作用于 SSID 列表</string>
+    <string name="tools_network_control_ssid_list_subtitle">添加要匹配的 Wi‑Fi 名称（SSID）</string>
+</resources>

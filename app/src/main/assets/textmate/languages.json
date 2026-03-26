@@ -1,0 +1,24 @@
+{
+  "languages": [
+    {
+      "grammar": "textmate/languages/yaml.json",
+      "name": "yaml",
+      "scopeName": "source.yaml"
+    },
+    {
+      "grammar": "textmate/languages/json.json",
+      "name": "json",
+      "scopeName": "source.json"
+    },
+    {
+      "grammar": "textmate/languages/ini.json",
+      "name": "ini",
+      "scopeName": "source.ini"
+    },
+    {
+      "grammar": "textmate/languages/shell.json",
+      "name": "shell",
+      "scopeName": "source.shell"
+    }
+  ]
+}

@@ -1,0 +1,710 @@
+<resources>
+    <!-- App -->
+    <string name="app_name">Box</string>
+
+    <!-- Common actions -->
+    <string name="action_back">返回</string>
+    <string name="action_retry">重试</string>
+    <string name="action_refresh">刷新</string>
+    <string name="action_refresh_page">刷新页面</string>
+    <string name="action_delete">删除</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_more">更多</string>
+    <string name="action_add">添加</string>
+    <string name="action_save">保存</string>
+
+    <string name="web_action_clear_cache">清除缓存</string>
+    <string name="web_action_cache_cleared">已清除缓存</string>
+    <string name="web_action_cache_clear_failed">清除缓存失败</string>
+    <string name="web_action_clear_cache_confirm">清除</string>
+    <string name="web_action_clear_cache_confirm_message">将清除 WebView 缓存和 Cookie，是否继续？</string>
+
+    <string name="config_editor_discard_changes_title">丢弃更改？</string>
+    <string name="config_editor_discard_changes_message">你有未保存的更改，将会丢失。</string>
+    <string name="config_editor_discard">丢弃</string>
+    <string name="action_apply">应用</string>
+    <string name="action_run">运行</string>
+    <string name="action_search">搜索</string>
+
+    <string name="common_on">开启</string>
+    <string name="common_off">关闭</string>
+
+    <string name="app_back_again_to_exit">再按一次返回退出</string>
+
+    <string name="main_tab_home">主页</string>
+    <string name="main_tab_tools">工具</string>
+    <string name="main_tab_settings">设置</string>
+
+    <string name="onboarding_title">欢迎使用</string>
+    <string name="onboarding_agreement_title">协议与声明</string>
+    <string name="onboarding_disclaimer_body">本应用仅用于研究与学习，可能会改变设备网络行为。你需要自行承担使用风险，并遵守当地法律法规与相关规则。</string>
+    <string name="onboarding_tos_accept">我已阅读并同意以上条款</string>
+    <string name="onboarding_go_to_tools">打开工具</string>
+    <string name="onboarding_go_to_settings">打开设置</string>
+    <string name="onboarding_permissions_title">权限</string>
+    <string name="onboarding_permissions_open_settings">系统设置</string>
+    <string name="onboarding_perm_request">授权</string>
+    <string name="onboarding_perm_root_title">Root 权限</string>
+    <string name="onboarding_perm_root_desc">必需。用于控制 Box 服务并应用系统网络规则。</string>
+    <string name="onboarding_perm_notifications_title">通知权限</string>
+    <string name="onboarding_perm_notifications_desc">可选。仅在需要启用通知相关功能时才会请求。</string>
+    <string name="onboarding_perm_apps_title">应用列表访问</string>
+    <string name="onboarding_perm_apps_desc">可选。用于应用列表黑白名单，部分系统需要你在“系统设置”中手动授予“获取应用列表/应用信息”权限。</string>
+    <string name="onboarding_perm_wifi_title">Wi‑Fi 匹配</string>
+    <string name="onboarding_perm_wifi_desc">可选。扫描附近 Wi‑Fi / 热点可能需要位置权限与附近设备权限。</string>
+
+    <string name="onboarding_usage_title">使用方法</string>
+    <string name="onboarding_usage_body">在“主页”的服务状态卡片右侧小卡片中可切换：核心、模式、IPv6（需在服务停止状态下操作）。\n\n在“网络控制”页面：\n- 点击条目前的图标可扫描附近 Wi‑Fi 或扫描已连接本机热点的设备</string>
+    <string name="onboarding_tips_title">使用技巧</string>
+    <string name="onboarding_tips_body">更新前建议先停止服务。\n\n工具页：\n- 更新核心 / 订阅 / WebUI / CNIP：点击右侧图标即可下载更新\n\n设置页：\n- 在“模块版本”处可点击检查更新</string>
+    <string name="onboarding_finish">完成</string>
+
+    <!-- Quick Settings / Foreground service -->
+    <string name="qs_tile_service_label">Box 服务</string>
+    <string name="service_notification_channel_name">Box 服务</string>
+    <string name="service_status_running">服务运行中</string>
+    <string name="service_status_stopped">服务已停止</string>
+    <string name="service_status_checking">正在检查服务</string>
+    <string name="service_status_starting">正在启动服务</string>
+    <string name="service_status_stopping">正在停止服务</string>
+    <string name="service_status_restarting">正在重启服务</string>
+    <string name="service_action_stop">停止</string>
+    <string name="service_action_restart">重启</string>
+
+    <!-- Panel -->
+    <string name="panel_title">面板</string>
+    <string name="panel_sheet_title">面板</string>
+    <string name="panel_sheet_add_title">添加面板</string>
+    <string name="panel_sheet_field_name">名称</string>
+    <string name="panel_sheet_field_url">链接</string>
+    <string name="panel_local_name">本地</string>
+    <string name="panel_error_name_required">请输入名称</string>
+    <string name="panel_error_url_invalid">链接格式不正确</string>
+
+    <!-- Home -->
+    <string name="home_env_btn_skip">跳过</string>
+    <string name="home_env_btn_exit">退出</string>
+    <string name="home_env_btn_install">安装</string>
+    <string name="home_env_btn_ok">确定</string>
+    <string name="home_env_title_root_required">需要 Root</string>
+    <string name="home_env_title_module_missing">缺少模块</string>
+    <string name="home_env_title_environment_missing">环境缺失</string>
+    <string name="home_env_body_root_required">本应用需要 Root 权限才能控制 Box 服务。</string>
+    <string name="home_env_body_module_missing">未安装 Box 模块。</string>
+    <string name="home_env_body_scripts_missing">缺少 Box 脚本。</string>
+    <string name="home_env_check_failed">环境检查失败</string>
+    <string name="home_environment_not_ready">环境未就绪</string>
+    <string name="home_please_wait">请稍候…</string>
+    <string name="home_tap_start_to_enable">点击“启动”以启用</string>
+
+    <string name="home_header_title">Box</string>
+    <string name="home_header_subtitle">状态与指标</string>
+    <string name="home_header_edit">编辑</string>
+
+    <string name="home_layout_title">编辑主页布局</string>
+    <string name="home_layout_visible">显示中</string>
+    <string name="home_layout_hidden">已隐藏</string>
+    <string name="home_layout_section_hero">服务</string>
+    <string name="home_layout_section_quick">快捷入口</string>
+    <string name="home_layout_section_latency">延迟</string>
+    <string name="home_layout_section_grid">指标</string>
+
+    <string name="home_layout_metrics_title">指标卡片</string>
+    <string name="home_layout_hidden_metrics_title">已隐藏的指标卡片</string>
+
+    <string name="home_quick_panel_title">面板</string>
+    <string name="home_quick_panel_subtitle">Web 界面</string>
+    <string name="home_quick_subs_title">订阅</string>
+    <string name="home_quick_subs_subtitle">管理</string>
+    <string name="home_quick_logs_title">日志</string>
+    <string name="home_quick_logs_subtitle">查看</string>
+
+    <string name="home_latency_title">延迟</string>
+    <string name="home_latency_baidu">Baidu</string>
+    <string name="home_latency_cloudflare">Cloudflare</string>
+    <string name="home_latency_google">Google</string>
+    <string name="home_latency_badge_test">测试</string>
+    <string name="home_latency_badge_ok">正常</string>
+    <string name="home_latency_badge_down">不可用</string>
+    <string name="home_latency_badge_part">部分</string>
+
+    <string name="home_card_ip">IP</string>
+    <string name="home_card_net_speed">网速</string>
+    <string name="home_card_subscription">订阅</string>
+    <string name="home_card_system">系统</string>
+    <string name="home_ip_badge_lan">LAN</string>
+    <string name="home_ip_badge_pub">PUB</string>
+    <string name="home_ip_badge_pub_with_flag">PUB %1$s</string>
+    <string name="home_ip_geo_sheet_title">公网 IP 详情</string>
+    <string name="home_ip_geo_sheet_subtitle">IPv4 与 IPv6 检测详情</string>
+    <string name="home_ip_geo_ipv4_title">IPv4</string>
+    <string name="home_ip_geo_ipv6_title">IPv6</string>
+    <string name="home_ip_geo_loading">加载中...</string>
+    <string name="home_ip_geo_unavailable">暂不可用</string>
+    <string name="home_ip_geo_field_ip">IP</string>
+    <string name="home_ip_geo_field_location">Location</string>
+    <string name="home_ip_geo_field_asn">ASN</string>
+    <string name="home_ip_geo_field_asn_org">asn_organization</string>
+    <string name="home_ip_geo_field_isp">ISP</string>
+    <string name="home_ip_geo_field_organization">organization</string>
+    <string name="home_net_up_unknown">上行 -</string>
+    <string name="home_net_up_value">上行 %1$s</string>
+
+    <string name="home_subscription_total">总计 %1$s</string>
+
+    <string name="home_service_status_running">运行中</string>
+    <string name="home_service_status_unavailable">不可用</string>
+    <string name="home_service_status_stopped">已停止</string>
+    <string name="home_service_status_starting">启动中</string>
+    <string name="home_service_status_stopping">停止中</string>
+    <string name="home_service_status_restarting">重启中</string>
+    <string name="home_service_status_checking">检查中</string>
+
+    <string name="settings_latency_targets_title">延迟目标</string>
+    <string name="settings_latency_targets_subtitle">自定义延迟测试的名称与链接</string>
+    <string name="settings_latency_target_name">名称</string>
+    <string name="settings_latency_target_url">链接</string>
+    <string name="settings_latency_reset">重置</string>
+    <string name="settings_latency_save">保存</string>
+
+    <string name="home_service_status_title">服务状态</string>
+
+    <string name="home_core_label">核心</string>
+    <string name="home_mode_label">模式</string>
+    <string name="home_ipv6_label">IPv6</string>
+    <string name="home_placeholder_dash">—</string>
+
+    <string name="home_action_start">启动</string>
+    <string name="home_action_stop">停止</string>
+    <string name="home_action_reload">重启</string>
+
+    <string name="home_action_restart_menu">重启</string>
+    <string name="home_action_reload_config">重载</string>
+    <string name="home_reload_config_success">重载成功</string>
+    <string name="home_reload_config_failed">重载失败</string>
+
+    <string name="home_uptime_hours_minutes">运行时间 · %1$d小时%2$d分钟</string>
+    <string name="home_uptime_minutes">运行时间 · %1$d分钟</string>
+    <string name="home_uptime_less_than_minute">运行时间 · &lt;1分钟</string>
+
+    <string name="home_badge_service">SRV</string>
+    <string name="home_badge_ip">IP</string>
+    <string name="home_badge_net">NET</string>
+    <string name="home_badge_ms">MS</string>
+    <string name="home_badge_sub">SUB</string>
+    <string name="home_badge_sys">SYS</string>
+
+    <string name="home_sheet_core_title">核心</string>
+    <string name="home_sheet_core_subtitle">选择当前核心</string>
+    <string name="home_sheet_network_mode_title">网络模式</string>
+    <string name="home_sheet_network_mode_subtitle">选择路由模式</string>
+    <string name="home_sheet_ipv6_title">IPv6</string>
+    <string name="home_sheet_ipv6_subtitle">启用或禁用</string>
+    <string name="home_sheet_current">当前</string>
+    <string name="home_sheet_tap_to_select">点击选择</string>
+
+    <!-- SubStore -->
+    <string name="substore_title">SubStore</string>
+    <string name="substore_loading">正在加载 SubStore...</string>
+    <string name="substore_unavailable">SubStore 不可用</string>
+    <string name="substore_port_not_found">未找到 SubStore 端口</string>
+    <string name="substore_panel_sheet_title">面板</string>
+    <string name="substore_panel_sheet_add_title">添加面板</string>
+    <string name="substore_panel_sheet_field_name">名称</string>
+    <string name="substore_panel_sheet_field_url">链接</string>
+    <string name="substore_panel_local_name">本地</string>
+    <string name="substore_panel_error_name_required">请输入名称</string>
+    <string name="substore_panel_error_url_invalid">链接格式不正确</string>
+
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+    <string name="settings_subtitle">应用偏好设置</string>
+    <string name="settings_section_appearance">外观</string>
+    <string name="settings_section_appearance_subtitle">主题与显示</string>
+    <string name="settings_theme_mode">主题模式</string>
+    <string name="settings_theme_light">浅色</string>
+    <string name="settings_theme_dark">深色</string>
+    <string name="settings_theme_follow_system">跟随系统</string>
+    <string name="settings_system_bars">系统栏</string>
+    <string name="settings_system_bars_transparent">透明</string>
+    <string name="settings_system_bars_opaque">不透明</string>
+    <string name="settings_system_bars_status">状态栏</string>
+    <string name="settings_system_bars_navigation">导航栏</string>
+    <string name="settings_system_bars_subtitle">%1$s%2$s，%3$s%4$s</string>
+    <string name="settings_system_bars_dialog_title">系统栏</string>
+    <string name="settings_system_bars_opaque_status_title">不透明状态栏</string>
+    <string name="settings_system_bars_opaque_navigation_title">不透明导航栏</string>
+    <string name="settings_system_bars_opaque_subtitle">纯色（非沉浸式）</string>
+    <string name="settings_true_black">背景纯黑</string>
+    <string name="settings_true_black_subtitle">仅在深色模式生效</string>
+    <string name="settings_liquid_glass_translucent">液态玻璃透亮效果</string>
+    <string name="settings_liquid_glass_translucent_subtitle">开启：透亮玻璃。关闭：仅模糊。</string>
+    <string name="settings_liquid_glass_lens_strength">折射强度</string>
+    <string name="settings_liquid_glass_lens_strength_subtitle">调节玻璃折射效果强度</string>
+    <string name="settings_liquid_glass_blur_strength">模糊强度</string>
+    <string name="settings_liquid_glass_blur_strength_subtitle">调节玻璃模糊强度</string>
+    <string name="settings_bottom_sheet_blur">底部弹窗模糊</string>
+    <string name="settings_bottom_sheet_blur_subtitle">开：玻璃模糊。关：纯色背景。</string>
+    <string name="settings_ui_scale">界面缩放（%1$d%%）</string>
+    <string name="settings_ui_scale_subtitle">缩放整个界面（80% - 120%）</string>
+    <string name="settings_appearance_more">其他外观设置</string>
+    <string name="settings_appearance_more_subtitle">更多视觉选项</string>
+    <string name="settings_language">语言</string>
+    <string name="settings_language_subtitle">应用语言</string>
+
+    <string name="settings_section_service">服务</string>
+    <string name="settings_section_service_subtitle">启动与运行</string>
+    <string name="settings_auto_start">开机自启</string>
+    <string name="settings_auto_start_subtitle">开机自动启动 Box 服务</string>
+    <string name="settings_accelerated_download">加速下载</string>
+    <string name="settings_accelerated_download_subtitle">使用 GitHub 镜像</string>
+
+    <string name="settings_section_subscription">订阅</string>
+    <string name="settings_section_subscription_subtitle">数据来源</string>
+    <string name="settings_use_clash_api">使用 Clash API</string>
+    <string name="settings_providers_mode">Providers 模式</string>
+    <string name="settings_url_mode">URL 模式</string>
+
+    <string name="settings_section_net_speed">网速</string>
+    <string name="settings_core_api_mode">核心 API 模式</string>
+    <string name="settings_system_mode">系统模式</string>
+    <string name="settings_filter_chains">过滤连接类型</string>
+    <string name="settings_filter_chains_subtitle">用逗号或换行分隔（例如 DIRECT,REJECT）</string>
+
+    <string name="settings_section_misc">其他</string>
+    <string name="settings_section_misc_subtitle">其他设置</string>
+
+    <string name="config_editor_search_hint">搜索关键字</string>
+    <string name="settings_open_panel_on_launch">启动时打开面板</string>
+    <string name="settings_open_panel_on_launch_subtitle">启动后自动进入面板页面</string>
+    <string name="settings_notifications">通知</string>
+    <string name="settings_notifications_subtitle">启用通知</string>
+
+    <string name="settings_backup_restore_title">备份与恢复</string>
+    <string name="settings_backup_restore_subtitle">导出 / 导入模块与应用规则</string>
+    <string name="settings_backup_restore_tab_backup">备份</string>
+    <string name="settings_backup_restore_tab_restore">恢复</string>
+    <string name="settings_backup_restore_scope_title">范围</string>
+    <string name="settings_backup_restore_scope_modules">模块</string>
+    <string name="settings_backup_restore_scope_apps">应用</string>
+    <string name="settings_backup_restore_scope_both">两者</string>
+    <string name="settings_backup_restore_scope_modules_only">只恢复模块</string>
+    <string name="settings_backup_restore_scope_apps_only">只恢复应用</string>
+    <string name="settings_backup_restore_export">导出</string>
+    <string name="settings_backup_restore_restore">恢复</string>
+    <string name="settings_backup_restore_file_title">备份文件</string>
+    <string name="settings_backup_restore_file_pick">点击选择 .zip 备份</string>
+    <string name="settings_backup_restore_detected">检测到：%1$s</string>
+    <string name="settings_backup_restore_detect_modules">模块</string>
+    <string name="settings_backup_restore_detect_apps">应用</string>
+    <string name="settings_backup_restore_detect_both">模块 + 应用</string>
+    <string name="settings_backup_restore_detect_unknown">未知</string>
+    <string name="settings_backup_restore_export_ok">导出完成</string>
+    <string name="settings_backup_restore_export_failed">导出失败</string>
+    <string name="settings_backup_restore_restore_ok">恢复完成</string>
+    <string name="settings_backup_restore_failed">操作失败</string>
+    <string name="settings_backup_restore_failed_detect">检测备份失败</string>
+    <string name="settings_backup_restore_exported">已导出：%1$s</string>
+    <string name="settings_backup_restore_confirm_body">即将恢复：%1$s。是否继续？</string>
+    <string name="settings_backup_restore_confirm_continue">继续</string>
+
+    <string name="settings_section_about">关于</string>
+    <string name="settings_section_about_subtitle">APP 与模块信息</string>
+    <string name="settings_version">版本</string>
+    <string name="settings_open_source_licenses">开源许可证</string>
+    <string name="settings_open_source_licenses_subtitle">第三方库与许可声明</string>
+    <string name="settings_module_not_installed">未安装</string>
+    <string name="settings_failed_check_updates">检查更新失败</string>
+    <string name="settings_already_up_to_date">已经是最新版本</string>
+
+    <!-- Dialogs / Theme -->
+    <string name="theme_dialog_title">主题模式</string>
+    <string name="theme_light_desc">始终使用浅色主题</string>
+    <string name="theme_dark_desc">始终使用深色主题</string>
+    <string name="theme_system_desc">与系统设置保持一致</string>
+
+    <!-- Dialogs / Language -->
+    <string name="settings_language_title">语言</string>
+    <string name="settings_language_follow_system">跟随系统</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_language_chinese">中文</string>
+    <string name="settings_language_follow_system_desc">使用系统语言</string>
+    <string name="settings_language_english_desc">English</string>
+    <string name="settings_language_chinese_desc">中文</string>
+
+    <!-- Tools -->
+    <string name="tools_title">工具</string>
+    <string name="tools_subtitle">模块偏好设置</string>
+    <string name="tools_section_config_title">配置</string>
+    <string name="tools_section_config_subtitle">管理与选择活动配置</string>
+    <string name="tools_section_apps_title">应用</string>
+    <string name="tools_section_apps_subtitle">代理模式与应用规则</string>
+    <string name="tools_section_network_control_title">网络控制</string>
+    <string name="tools_section_network_control_subtitle">基于 Wi-Fi 的模块控制</string>
+    <string name="tools_section_logs_title">日志</string>
+    <string name="tools_section_logs_subtitle">查看运行日志</string>
+    <string name="tools_section_update_title">更新</string>
+    <string name="tools_section_update_subtitle">模块内容更新</string>
+
+    <string name="tools_row_manage">管理</string>
+    <string name="tools_row_select">选择</string>
+    <string name="tools_row_view">查看</string>
+    <string name="tools_row_open">打开</string>
+    <string name="tools_row_browse_search_create">浏览 / 搜索 / 创建</string>
+    <string name="tools_row_choose_active_config">选择活动配置</string>
+    <string name="tools_row_manage_app_rules">管理应用规则</string>
+    <string name="tools_row_open_unified_logs">打开日志视图</string>
+    <string name="tools_row_network_control_subtitle">配置 Wi-Fi 规则</string>
+
+    <string name="tools_update_target_core">更新核心</string>
+    <string name="tools_update_target_subscription">订阅</string>
+    <string name="tools_update_target_webui">WebUI</string>
+    <string name="tools_update_target_cnip">CNIP</string>
+    <string name="tools_update_subtitle_core">选择要更新的核心</string>
+    <string name="tools_update_subtitle_subscription">Providers · 规则</string>
+    <string name="tools_update_subtitle_webui">更新面板资源</string>
+    <string name="tools_update_subtitle_cnip">中国 IP 数据库</string>
+    <string name="tools_update_sheet_title">更新核心</string>
+    <string name="tools_update_sheet_subtitle">选择要更新的核心</string>
+    <string name="tools_update_started">正在更新%1$s...</string>
+    <string name="tools_update_completed">更新完成：%1$s</string>
+    <string name="tools_update_failed">更新失败</string>
+    <string name="tools_update_completed_subscription">更新完成：订阅</string>
+    <string name="tools_update_completed_webui">更新完成：WebUI</string>
+    <string name="tools_update_completed_cnip">更新完成：CNIP</string>
+    <string name="tools_update_tip_title">重要提示</string>
+    <string name="tools_update_tip_body">要正确应用设置，请返回此页面，点击对应条目右侧的下载更新按钮，然后重启服务。</string>
+
+    <string name="action_update">更新</string>
+
+    <!-- Tools / Update -->
+    <string name="tools_update_back_compact">&lt; 返回</string>
+
+    <!-- Tools / Subscription -->
+    <string name="tools_subscription_load_failed">加载失败</string>
+    <string name="tools_subscription_save_failed">保存失败</string>
+    <string name="tools_subscription_section_general_title">通用</string>
+    <string name="tools_subscription_section_general_subtitle">自动更新与刷新行为</string>
+    <string name="tools_subscription_renew_title">覆盖配置</string>
+    <string name="tools_subscription_renew_subtitle">用第一个 Mihomo URL 覆盖</string>
+    <string name="tools_subscription_update_subscription_title">更新订阅</string>
+    <string name="tools_subscription_update_subscription_subtitle">按计划刷新 providers</string>
+    <string name="tools_subscription_run_crontab_title">计划任务</string>
+    <string name="tools_subscription_run_crontab_subtitle">允许计划任务</string>
+    <string name="tools_subscription_interval_title">时间间隔</string>
+    <string name="tools_subscription_interval_placeholder">例如 6h / 12h / 1d</string>
+    <string name="tools_subscription_mihomo_urls_title">Mihomo 链接</string>
+    <string name="tools_subscription_mihomo_configs_title">Mihomo 名称</string>
+    <string name="tools_subscription_paths_title">路径</string>
+    <string name="tools_subscription_paths_subtitle">核心提供路径与 URLs</string>
+    <string name="tools_subscription_mihomo_provide_path_title">Mihomo 提供路径</string>
+    <string name="tools_subscription_sing_box_url_title">Sing-box 链接</string>
+    <string name="tools_subscription_hint_enter_url">请输入订阅链接</string>
+    <string name="tools_subscription_hint_enter_filename">请输入文件名（例如 proxy.yaml）</string>
+    <string name="tools_subscription_path_placeholder">/data/adb/box/...</string>
+    <string name="tools_subscription_url_placeholder">https://...</string>
+    <string name="tools_subscription_append_item">追加一个新条目</string>
+
+    <string name="tools_subscription_key_interva_update_subtitle">更新间隔</string>
+    <string name="tools_subscription_key_subscription_url_mihomo_subtitle">配置 Mihomo 订阅链接</string>
+    <string name="tools_subscription_key_name_provide_mihomo_config_subtitle">配置 Mihomo 订阅名称</string>
+    <string name="tools_subscription_key_mihomo_provide_path_subtitle">配置 Mihomo 订阅路径</string>
+    <string name="tools_subscription_key_subscription_url_singbox_subtitle">配置 Sing-box 订阅链接</string>
+
+    <!-- Tools / Network control -->
+    <string name="tools_network_control_section_general_title">通用</string>
+    <string name="tools_network_control_section_general_subtitle">基于 Wi-Fi 的规则</string>
+    <string name="tools_network_control_enable_title">启用网络控制</string>
+    <string name="tools_network_control_enable_subtitle">Wi‑Fi 规则总开关</string>
+    <string name="tools_network_control_use_on_wifi_disconnect_title">Wi-Fi 断开时启用</string>
+    <string name="tools_network_control_use_on_wifi_disconnect_subtitle">Wi-Fi 断开时应用规则</string>
+    <string name="tools_network_control_use_on_wifi_title">Wi-Fi 连接时启用</string>
+    <string name="tools_network_control_use_on_wifi_subtitle">Wi-Fi 连接时应用规则</string>
+    <string name="tools_network_control_enable_ssid_matching_title">启用 Wi-Fi 匹配（SSID/BSSID）</string>
+    <string name="tools_network_control_enable_ssid_matching_subtitle">仅对指定 SSID/BSSID 应用规则</string>
+    <string name="tools_network_control_enable_log_title">启用网络控制日志</string>
+    <string name="tools_network_control_enable_log_subtitle">写入网络控制日志</string>
+
+    <string name="tools_network_control_ssid_mode_title">Wi‑Fi 匹配列表模式</string>
+    <string name="tools_network_control_ssid_mode_subtitle">同时作用于 SSID 列表与路由器 MAC（BSSID）列表</string>
+    <string name="tools_network_control_ssid_mode_blacklist">黑名单</string>
+    <string name="tools_network_control_ssid_mode_blacklist_subtitle">除列表外的 SSID 都应用规则</string>
+    <string name="tools_network_control_ssid_mode_whitelist">白名单</string>
+    <string name="tools_network_control_ssid_mode_whitelist_subtitle">仅对列表中的 SSID 应用规则</string>
+
+    <string name="tools_network_control_ssid_list_title">SSID 列表</string>
+    <string name="tools_network_control_ssid_list_subtitle">添加 Wi-Fi 名称（SSID）</string>
+    <string name="tools_network_control_hint_enter_ssid">请输入 SSID</string>
+    <string name="tools_network_control_bssid_list_title">路由器 MAC（BSSID）列表</string>
+    <string name="tools_network_control_bssid_list_subtitle">用于 Wi‑Fi 匹配（路由器 MAC 地址 / BSSID）</string>
+    <string name="tools_network_control_hint_enter_bssid">输入路由器 MAC（BSSID）（例如 12:34:56:78:9A:BC）</string>
+
+    <string name="tools_network_control_hotspot_mac_title">热点客户端 MAC 过滤</string>
+    <string name="tools_network_control_hotspot_mac_subtitle">按 MAC 控制代理</string>
+    <string name="tools_network_control_hotspot_mac_enable_title">启用 MAC 过滤</string>
+    <string name="tools_network_control_hotspot_mac_enable_subtitle">对热点客户端应用名单</string>
+    <string name="tools_network_control_hotspot_mac_mode_blacklist_title">黑名单模式</string>
+    <string name="tools_network_control_hotspot_mac_mode_blacklist_subtitle">除名单外都代理</string>
+    <string name="tools_network_control_hotspot_mac_mode_whitelist_title">白名单模式</string>
+    <string name="tools_network_control_hotspot_mac_mode_whitelist_subtitle">仅代理名单内</string>
+    <string name="tools_network_control_hint_enter_mac">输入 MAC（例如 12:34:56:78:9A:BC）</string>
+
+    <string name="tools_network_control_hotspot_mac_picker_title">热点客户端</string>
+    <string name="tools_network_control_hotspot_mac_picker_loading">加载中...</string>
+    <string name="tools_network_control_hotspot_mac_picker_empty">暂无客户端</string>
+    <string name="tools_network_control_hotspot_mac_picker_error">获取失败</string>
+    <string name="tools_network_control_append_item">追加一个条目</string>
+    <string name="tools_network_control_wifi_picker_title">附近的 Wi-Fi</string>
+    <string name="tools_network_control_wifi_picker_loading">扫描中...</string>
+    <string name="tools_network_control_wifi_picker_empty">未发现 Wi-Fi</string>
+    <string name="tools_network_control_wifi_picker_error">扫描 Wi-Fi 失败</string>
+    <string name="tools_network_control_wifi_picker_permission_required">需要权限才能扫描附近的 Wi-Fi</string>
+    <string name="tools_network_control_wifi_picker_location_required">需要开启定位才能扫描附近的 Wi-Fi</string>
+    <string name="tools_network_control_load_failed">加载失败</string>
+    <string name="tools_network_control_save_failed">保存失败</string>
+    <string name="tools_update_core_title">核心</string>
+    <string name="tools_update_core_subtitle_choose_channel">选择核心通道</string>
+    <string name="tools_update_core_section_title">核心</string>
+    <string name="tools_update_core_section_subtitle_selectable">可选择</string>
+    <string name="tools_update_save_failed">保存失败</string>
+    <string name="tools_update_load_failed">加载失败</string>
+
+    <string name="tools_update_core_mihomo_subtitle">Mihomo 核心</string>
+    <string name="tools_update_core_mihomo_smart_subtitle">Mihomo 智能核心</string>
+    <string name="tools_update_core_sing_box_subtitle">Sing-box 核心</string>
+    <string name="tools_update_core_xray_subtitle">Xray 核心</string>
+    <string name="tools_update_core_v2ray_subtitle">V2Ray 核心</string>
+    <string name="tools_update_core_hysteria_subtitle">Hysteria 核心</string>
+
+    <!-- Tools / CNIP -->
+    <string name="tools_cnip_section_general_title">常规</string>
+    <string name="tools_cnip_section_general_subtitle">CNIP 绕过</string>
+    <string name="tools_cnip_bypass_title">绕过 CNIP</string>
+    <string name="tools_cnip_bypass_subtitle">绕过中国 IP 列表</string>
+    <string name="tools_cnip_bypass_ipv4_title">绕过 CNIP (IPv4)</string>
+    <string name="tools_cnip_bypass_ipv4_subtitle">仅绕过 IPv4 列表</string>
+    <string name="tools_cnip_bypass_ipv6_title">绕过 CNIP (IPv6)</string>
+    <string name="tools_cnip_bypass_ipv6_subtitle">仅绕过 IPv6 列表</string>
+
+    <string name="tools_cnip_section_files_title">文件</string>
+    <string name="tools_cnip_section_files_subtitle">CNIP 文件路径</string>
+    <string name="tools_cnip_ipv4_file_title">IPv4 文件</string>
+    <string name="tools_cnip_ipv6_file_title">IPv6 文件</string>
+    <string name="tools_cnip_placeholder_path">/data/adb/box/...</string>
+
+    <string name="tools_cnip_section_sources_title">来源</string>
+    <string name="tools_cnip_section_sources_subtitle">下载 URL</string>
+    <string name="tools_cnip_ipv4_url_title">IPv4 URL</string>
+    <string name="tools_cnip_ipv6_url_title">IPv6 URL</string>
+    <string name="tools_cnip_placeholder_url">https://...</string>
+
+    <!-- Tools / Logs -->
+    <string name="tools_logs_title">日志</string>
+    <string name="tools_logs_loading">正在加载日志...</string>
+    <string name="tools_logs_back_compact">&lt; 返回</string>
+    <string name="tools_logs_auto_refresh">自动刷新</string>
+    <string name="tools_logs_auto_refresh_on">自动刷新已开启</string>
+    <string name="tools_logs_manual_refresh">手动刷新</string>
+    <string name="tools_logs_current_prefix">当前：%1$s • %2$s</string>
+    <string name="tools_logs_failed_load">加载日志失败</string>
+    <string name="tools_logs_failed_read">读取日志失败</string>
+    <string name="tools_logs_failed_refresh">刷新失败</string>
+    <string name="tools_logs_failed_delete">删除失败</string>
+    <string name="tools_logs_status_available">可用</string>
+    <string name="tools_logs_status_current">当前</string>
+    <string name="tools_logs_no_files">没有日志文件</string>
+    <string name="tools_logs_delete_dialog_title">删除日志文件？</string>
+    <string name="tools_logs_delete_dialog_body">将永久删除 %2$s 中的 %1$s。</string>
+
+    <!-- Tools / Config -->
+    <string name="tools_config_back_compact">&lt; 返回</string>
+    <string name="tools_config_menu_refresh">刷新</string>
+    <string name="tools_config_menu_create">创建</string>
+    <string name="tools_config_menu_download">下载</string>
+    <string name="tools_config_menu_new_file">新建文件</string>
+    <string name="tools_config_menu_new_folder">新建文件夹</string>
+    <string name="tools_config_search_hint">搜索文件与文件夹</string>
+    <string name="tools_config_go">前往</string>
+    <string name="tools_config_clear">清空</string>
+    <string name="tools_config_edit">编辑</string>
+    <string name="tools_config_rename">重命名</string>
+    <string name="tools_config_delete">删除</string>
+
+    <string name="tools_config_create_folder">创建文件夹</string>
+    <string name="tools_config_create_file">创建文件</string>
+    <string name="tools_config_name">名称</string>
+    <string name="tools_config_create_folder_helper">在当前目录创建一个新文件夹</string>
+    <string name="tools_config_create_file_helper">创建一个新的空文件</string>
+
+    <string name="tools_config_current_name">当前：%1$s</string>
+    <string name="tools_config_new_name">新名称</string>
+
+    <string name="tools_config_delete_title">删除 %1$s？</string>
+    <string name="tools_config_delete_confirm">确定要删除“%1$s”吗？</string>
+    <string name="tools_config_delete_folder_warning">这将删除文件夹及其所有内容。</string>
+    <string name="tools_config_delete_file_warning">此操作无法撤销。</string>
+
+    <string name="tools_config_files_folders_title">文件与文件夹</string>
+    <string name="tools_config_loading">加载中...</string>
+    <string name="tools_config_no_results_found">未找到结果</string>
+    <string name="tools_config_empty_directory">空目录</string>
+    <string name="tools_config_items_count">%1$d 项</string>
+    <string name="tools_config_loading_files">正在加载文件...</string>
+    <string name="tools_config_parent_directory">上级目录</string>
+    <string name="tools_config_no_files_match">没有文件匹配你的搜索</string>
+    <string name="tools_config_directory_empty">该目录为空</string>
+
+    <string name="tools_config_folder">文件夹</string>
+    <string name="tools_config_file">文件</string>
+
+    <string name="tools_config_create_config_file">创建配置文件</string>
+    <string name="tools_config_file_name">文件名</string>
+    <string name="tools_config_supported_formats">支持格式：.yaml、.yml、.json</string>
+
+    <string name="tools_config_download_config_from_url">从 URL 下载配置</string>
+    <string name="tools_config_url">URL</string>
+    <string name="tools_config_url_example">https://example.com/config.yaml</string>
+    <string name="tools_config_save_as">另存为</string>
+    <string name="tools_config_download_config_hint">从远程 URL 下载配置文件</string>
+
+    <string name="tools_config_configuration_files">配置文件</string>
+    <string name="tools_config_loading_configuration_files">正在加载配置文件...</string>
+    <string name="tools_config_no_config_files_found">未找到配置文件</string>
+    <string name="tools_config_active_none">无</string>
+    <string name="tools_config_files_active_summary">%1$d 个文件 • 活动：%2$s</string>
+    <string name="tools_config_core_not_found">未找到核心</string>
+    <string name="tools_config_placeholder_config_yaml">config.yaml</string>
+
+    <string name="tools_config_no_configuration_files_found">未找到配置文件</string>
+    <string name="tools_config_create_new_config_hint">创建一个新的配置文件以开始使用</string>
+    <string name="tools_config_active_configuration">活动配置</string>
+    <string name="tools_config_tap_to_select">点击选择</string>
+    <string name="tools_config_badge_active">活动</string>
+
+    <!-- Tools / Apps -->
+    <string name="tools_apps_title">应用</string>
+    <string name="tools_apps_proxy_blacklist">黑名单</string>
+    <string name="tools_apps_proxy_whitelist">白名单</string>
+    <string name="tools_apps_proxy_core">核心</string>
+    <string name="tools_apps_header_summary">%1$d 项 • %2$s • 已选 %3$d</string>
+    <string name="tools_apps_header_summary_core">%1$d 项 • Core • 不应用黑白名单</string>
+    <string name="tools_apps_selected">已选</string>
+    <string name="tools_apps_others">其他（%1$d）</string>
+    <string name="tools_apps_back_compact">&lt; 返回</string>
+    <string name="tools_apps_search_hint">搜索应用</string>
+    <string name="tools_apps_sort_filter_cd">排序/筛选</string>
+    <string name="tools_apps_menu_refresh">刷新</string>
+    <string name="tools_apps_menu_smart_select">智能选择</string>
+    <string name="tools_apps_menu_select_all">全选</string>
+    <string name="tools_apps_menu_invert">反选</string>
+    <string name="tools_apps_no_apps">没有应用</string>
+    <string name="tools_apps_no_results">没有结果</string>
+    <string name="tools_apps_user_fallback">用户 %1$d</string>
+    <string name="tools_apps_failed_update_proxy_mode">更新 proxy_mode 失败</string>
+    <string name="tools_apps_selected_count">(%1$d)</string>
+    <string name="tools_apps_restart_tip_title">重启提示</string>
+    <string name="tools_apps_restart_tip_body">应用规则保存后，需要重启服务才会生效。</string>
+    <string name="tools_apps_restart_tip_body_pending">你有未保存的更改。请先保存，再重启服务。</string>
+
+    <string name="tools_apps_smart_select_title">智能选择</string>
+    <string name="tools_apps_smart_select_body">基于当前模式的简单规则自动选择应用。会更新当前已选择的应用列表。</string>
+    <string name="tools_apps_smart_select_replace">替换当前选择</string>
+    <string name="tools_apps_smart_select_merge">合并到当前选择</string>
+    <string name="tools_apps_smart_selecting_title">正在智能选择...</string>
+    <string name="tools_apps_smart_selecting_analyzing">正在分析应用</string>
+
+    <string name="tools_apps_sort_filter_title">排序与筛选</string>
+    <string name="tools_apps_sort_by">排序方式</string>
+    <string name="tools_apps_sort_name_asc">名称 ↑</string>
+    <string name="tools_apps_sort_name_desc">名称 ↓</string>
+    <string name="tools_apps_sort_install_asc">安装 ↑</string>
+    <string name="tools_apps_sort_install_desc">安装 ↓</string>
+
+    <string name="tools_apps_app_type">应用类型</string>
+    <string name="tools_apps_filter_all">全部</string>
+    <string name="tools_apps_filter_user">用户</string>
+    <string name="tools_apps_filter_system">系统</string>
+
+    <string name="tools_apps_network_permission">网络权限</string>
+    <string name="tools_apps_filter_only_network">仅有网络</string>
+    <string name="tools_apps_filter_exclude_network">排除网络</string>
+
+    <string name="tools_apps_user_space">用户空间</string>
+    <string name="tools_apps_filter_all_users">所有用户</string>
+    <string name="tools_apps_filter_main_only">仅主用户</string>
+    <string name="tools_apps_filter_work_clone">工作/克隆</string>
+    <string name="tools_apps_filter_other_users">其他用户</string>
+
+    <!-- BottomSheets -->
+    <string name="bottomsheet_net_speed_title">网速</string>
+    <string name="bottomsheet_net_speed_down">下行</string>
+    <string name="bottomsheet_net_speed_up">上行</string>
+    <string name="bottomsheet_net_speed_details">详情</string>
+    <string name="bottomsheet_net_speed_fastest_download">最快下载</string>
+    <string name="bottomsheet_net_speed_fastest_upload">最快上传</string>
+    <string name="bottomsheet_subscription_go_tools">前往 工具 / 订阅 配置</string>
+    <string name="bottomsheet_subscription_none">暂无订阅</string>
+    <string name="bottomsheet_subscription_expires">到期：%1$s</string>
+    <string name="bottomsheet_subscription_updated">更新于 %1$s</string>
+    <string name="common_yesterday_time">昨天 %1$s</string>
+    <string name="bottomsheet_subscription_upload">上传</string>
+    <string name="bottomsheet_subscription_download">下载</string>
+    <string name="bottomsheet_subscription_remaining">剩余</string>
+    <string name="bottomsheet_subscription_used">已用 %1$s</string>
+    <string name="bottomsheet_subscription_total">总计 %1$s</string>
+
+    <string name="bottomsheet_service_details_title">服务详情</string>
+    <string name="bottomsheet_service_details_pid">进程 ID</string>
+    <string name="bottomsheet_service_details_memory">内存</string>
+    <string name="bottomsheet_service_details_core_version">核心版本</string>
+    <string name="bottomsheet_service_details_cpu_affinity">CPU 亲和性</string>
+    <string name="bottomsheet_service_details_current_cpu">当前 CPU</string>
+    <string name="bottomsheet_system_environment_title">系统环境</string>
+    <string name="bottomsheet_system_environment_android">Android</string>
+    <string name="bottomsheet_system_environment_kernel">内核版本</string>
+    <string name="bottomsheet_system_environment_ipset">IPSet</string>
+    <string name="bottomsheet_system_environment_ipset_not_supported">不支持</string>
+    <string name="bottomsheet_system_environment_ipset_available">可用</string>
+    <string name="bottomsheet_system_environment_ipset_missing_binary">缺少二进制</string>
+    <string name="bottomsheet_system_environment_total_memory">总内存</string>
+
+    <string name="bottomsheet_system_environment_ipset_status_not_supported">不支持</string>
+    <string name="bottomsheet_system_environment_ipset_status_available">可用</string>
+    <string name="bottomsheet_system_environment_ipset_status_missing_binary">缺少二进制</string>
+
+    <string name="bottomsheet_current_version">当前版本</string>
+    <string name="bottomsheet_latest_version_title">你正在使用最新版本</string>
+    <string name="bottomsheet_no_updates_available">当前没有可用更新</string>
+    <string name="bottomsheet_update_available">有可用更新</string>
+    <string name="bottomsheet_release_recommended">推荐</string>
+    <string name="bottomsheet_release_version">版本：%1$s</string>
+    <string name="bottomsheet_release_commit">提交：%1$s</string>
+    <string name="bottomsheet_release_date">日期：%1$s</string>
+
+    <string name="bottomsheet_release_stable">稳定版</string>
+    <string name="bottomsheet_release_prerelease">预发布版</string>
+    <string name="bottomsheet_release_stable_recommended">稳定版（推荐）</string>
+    <string name="bottomsheet_release_prerelease_recommended">预发布版（推荐）</string>
+    <string name="bottomsheet_release_type">类型：%1$s</string>
+    <string name="bottomsheet_release_notes">更新日志：</string>
+    <string name="bottomsheet_release_prerelease_warning">这是预发布版本，用于测试和调试。</string>
+    <string name="bottomsheet_view_in_browser">在浏览器中查看</string>
+
+    <string name="bottomsheet_download_module">下载模块</string>
+    <string name="bottomsheet_downloading">下载中</string>
+    <string name="bottomsheet_no_module_asset">无模块资源</string>
+    <string name="bottomsheet_download_success">下载成功</string>
+    <string name="bottomsheet_download_failed">下载失败</string>
+
+    <string name="bottomsheet_about_title">Box</string>
+    <string name="bottomsheet_about_module">模块</string>
+    <string name="bottomsheet_about_channel">频道</string>
+    <string name="bottomsheet_about_module_version">模块版本</string>
+    <string name="bottomsheet_about_author">作者</string>
+    <string name="bottomsheet_about_value_github">GitHub</string>
+    <string name="bottomsheet_about_value_telegram">Telegram</string>
+    <string name="bottomsheet_about_value_author">boxproxy</string>
+
+    <string name="bottomsheet_release_type_prerelease">预发布版</string>
+    <string name="bottomsheet_release_type_stable">稳定版</string>
+</resources>
