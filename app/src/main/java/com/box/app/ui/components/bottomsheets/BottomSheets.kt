@@ -11,17 +11,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.windowInsetsPadding
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,68 +26,54 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.Memory
-import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Autorenew
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 
-import androidx.activity.BackEventCompat
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.PredictiveBackHandler
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.runtime.collectAsState
-
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInteropFilter
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -102,26 +83,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.box.app.R
 import com.box.app.data.backend.BoxApi
-import com.box.app.data.backend.ProcSampler
 import com.box.app.data.backend.ShellExecutor
 import com.box.app.data.backend.HomeMetricsApi
 import com.box.app.data.model.HomeMetricsState
 import com.box.app.data.model.SubscriptionItem
-import com.box.app.ui.components.home.SpeedSparkline
 import com.box.app.ui.theme.appColors
 import com.box.app.utils.ThemeManager
 import com.box.app.utils.UiScaleManager
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.highlight.Highlight
-import com.kyant.backdrop.shadow.InnerShadow
-import com.kyant.backdrop.shadow.Shadow
 import java.text.SimpleDateFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -129,8 +101,30 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.Date
 import java.util.Locale
+import top.yukonga.miuix.kmp.window.WindowBottomSheet
 
 val LocalSheetBackdrop = staticCompositionLocalOf<com.kyant.backdrop.Backdrop?> { null }
+
+// BottomSheet 模糊状态：通过计数器支持多 sheet 叠加
+class SheetBlurState {
+    var count by androidx.compose.runtime.mutableIntStateOf(0)
+        private set
+    val isActive: Boolean get() = count > 0
+    fun increment() { count++ }
+    fun decrement() { count = (count - 1).coerceAtLeast(0) }
+}
+
+val LocalSheetBlurState = staticCompositionLocalOf<SheetBlurState?> { null }
+
+/** 在 BottomSheet 组合期间自动注册/注销模糊计数 */
+@Composable
+fun SheetBlurEffect() {
+    val state = LocalSheetBlurState.current ?: return
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        state.increment()
+        onDispose { state.decrement() }
+    }
+}
 
 data class BoxServiceInfo(
     val pid: String = "-",
@@ -148,11 +142,9 @@ data class BoxServiceInfo(
     val currentCpu: String = "-"
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppModalBottomSheet(
     onDismissRequest: () -> Unit,
-    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     modifier: Modifier = Modifier,
     shape: Shape = RoundedRectangle(22.dp),
     containerColor: Color = appColors().card,
@@ -162,218 +154,40 @@ fun AppModalBottomSheet(
     content: @Composable ColumnScope.() -> Unit
 ) {
 
-    val backdrop = LocalSheetBackdrop.current
-    val supportsLiquidGlass = ThemeManager.shouldUseBlurEffects()
-    val effectiveBackdrop = if (supportsLiquidGlass) backdrop else null
+    val blurEnabled = ThemeManager.shouldUseBlurEffects()
+
+    // 注册模糊计数
+    if (blurEnabled) SheetBlurEffect()
+
     val baseDensity = LocalDensity.current
     val uiScale by UiScaleManager.uiScale.collectAsState()
     val scaledDensity = Density(
         density = baseDensity.density * uiScale,
         fontScale = baseDensity.fontScale * uiScale
     )
-    val sheetOuterPadding = 16.dp
 
-    var sheetHeightPx by remember { mutableIntStateOf(0) }
-    val dismissProgress = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    var predictiveInProgress by remember { mutableStateOf(false) }
-
-    val animatedScrimColor = scrimColor.copy(
-        alpha = (scrimColor.alpha * (1f - dismissProgress.value)).coerceIn(0f, 1f)
-    )
-
-    val sheetDismissModifier = Modifier
-        .onSizeChanged { sheetHeightPx = it.height }
-        .graphicsLayer {
-            if (sheetHeightPx > 0) {
-                translationY = dismissProgress.value * sheetHeightPx.toFloat()
-            }
-        }
-
-    if (effectiveBackdrop == null) {
-        ModalBottomSheet(
-            onDismissRequest = onDismissRequest,
-            sheetState = sheetState,
-            modifier = modifier,
-            shape = shape,
-            properties = ModalBottomSheetProperties(shouldDismissOnBackPress = false),
-            containerColor = Color.Transparent,
-            scrimColor = animatedScrimColor,
-            tonalElevation = tonalElevation,
-            contentWindowInsets = { WindowInsets.navigationBars },
-            dragHandle = null,
-            content = {
-                BackHandler(enabled = !predictiveInProgress) {
-                    scope.launch {
-                        dismissProgress.stop()
-                        dismissProgress.animateTo(1f, animationSpec = tween(120))
-                        onDismissRequest()
-                    }
-                }
-
-                PredictiveBackHandler(enabled = true) { backEvents: kotlinx.coroutines.flow.Flow<BackEventCompat> ->
-                    predictiveInProgress = true
-                    dismissProgress.stop()
-                    val startProgress = dismissProgress.value
-                    try {
-                        backEvents.collect { ev ->
-                            val p = kotlin.math.max(startProgress, ev.progress.coerceIn(0f, 1f))
-                            dismissProgress.snapTo(p)
-                        }
-
-                        dismissProgress.animateTo(
-                            targetValue = 1f,
-                            animationSpec = tween(durationMillis = 120)
-                        )
-                        onDismissRequest()
-                    } catch (_: CancellationException) {
-                        dismissProgress.animateTo(
-                            targetValue = 0f,
-                            animationSpec = tween(durationMillis = 180)
-                        )
-                    } finally {
-                        predictiveInProgress = false
-                    }
-                }
-
-                CompositionLocalProvider(LocalDensity provides scaledDensity) {
-                    Column(
-                        modifier = Modifier
-                            .then(sheetDismissModifier)
-                            .fillMaxWidth()
-                            .padding(
-                                start = sheetOuterPadding,
-                                end = sheetOuterPadding,
-                                bottom = sheetOuterPadding
-                            )
-                            .clip(shape)
-                            .background(containerColor)
-                    ) {
-                        if (dragHandle != null) {
-                            dragHandle()
-                        }
-                        content()
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
-                }
-            }
-        )
-        return
-    }
-
-    val isDark = ThemeManager.shouldUseDarkTheme()
-    val translucent by ThemeManager.liquidGlassTranslucent.collectAsState()
-    val blurDp by ThemeManager.liquidGlassBlurDp.collectAsState()
-    val lensStrength by ThemeManager.liquidGlassLensStrength.collectAsState()
-    val bottomSheetBlur by ThemeManager.bottomSheetBlur.collectAsState()
-    val bottomSheetBackdrop = rememberLayerBackdrop()
-    val useBackdropBlur = supportsLiquidGlass && bottomSheetBlur
-    var backdropTick by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(useBackdropBlur) {
-        if (!useBackdropBlur) return@LaunchedEffect
-        while (isActive) {
-            delay(180)
-            backdropTick++
-        }
-    }
-
-    ModalBottomSheet(
-        onDismissRequest = onDismissRequest,
-        sheetState = sheetState,
+    WindowBottomSheet(
+        show = true,
         modifier = modifier,
-        shape = shape,
-        properties = ModalBottomSheetProperties(shouldDismissOnBackPress = false),
-        containerColor = Color.Transparent,
-        scrimColor = animatedScrimColor,
-        tonalElevation = tonalElevation,
-        contentWindowInsets = { WindowInsets.navigationBars },
-        dragHandle = null
+        backgroundColor = containerColor,
+        enableWindowDim = scrimColor.alpha > 0f,
+        cornerRadius = 22.dp,
+        outsideMargin = DpSize(16.dp, 16.dp),
+        insideMargin = DpSize(0.dp, 0.dp),
+        dragHandleColor = Color.Transparent,
+        onDismissRequest = onDismissRequest
     ) {
-        BackHandler(enabled = !predictiveInProgress) {
-            scope.launch {
-                dismissProgress.stop()
-                dismissProgress.animateTo(1f, animationSpec = tween(120))
-                onDismissRequest()
-            }
-        }
-
-        PredictiveBackHandler(enabled = true) { backEvents: kotlinx.coroutines.flow.Flow<BackEventCompat> ->
-            predictiveInProgress = true
-            dismissProgress.stop()
-            val startProgress = dismissProgress.value
-            try {
-                backEvents.collect { ev ->
-                    val p = kotlin.math.max(startProgress, ev.progress.coerceIn(0f, 1f))
-                    dismissProgress.snapTo(p)
-                }
-
-                dismissProgress.animateTo(
-                    targetValue = 1f,
-                    animationSpec = tween(durationMillis = 120)
-                )
-                onDismissRequest()
-            } catch (_: CancellationException) {
-                dismissProgress.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(durationMillis = 180)
-                )
-            } finally {
-                predictiveInProgress = false
-            }
-        }
-
         CompositionLocalProvider(LocalDensity provides scaledDensity) {
             Column(
                 modifier = Modifier
-                    .then(sheetDismissModifier)
                     .fillMaxWidth()
-                    .padding(
-                        start = sheetOuterPadding,
-                        end = sheetOuterPadding,
-                        bottom = sheetOuterPadding
-                    )
                     .clip(shape)
-                    .then(
-                        if (useBackdropBlur) {
-                            Modifier.drawBackdrop(
-                                backdrop = effectiveBackdrop,
-                                exportedBackdrop = bottomSheetBackdrop,
-                                shape = { shape },
-                                effects = {
-                                    if (translucent) {
-                                        vibrancy()
-                                    }
-                                    blur(blurDp.dp.toPx())
-                                    if (translucent) {
-                                        val s = lensStrength.coerceIn(0f, 2f)
-                                        lens((12f * s).dp.toPx(), (24f * s).dp.toPx(), isDark)
-                                    }
-                                },
-                                onDrawSurface = {
-                                    drawRect(containerColor.copy(alpha = if (isDark) 0.26f else 0.34f))
-                                }
-                            )
-                                // Keep sheet backdrop sampling live while host content updates.
-                                .drawWithContent {
-                                    backdropTick
-                                    drawContent()
-                                }
-                        } else {
-                            Modifier.background(containerColor)
-                        }
-                    )
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
-                    if (dragHandle != null) {
-                        dragHandle()
-                    }
-                    content()
-                    Spacer(modifier = Modifier.height(12.dp))
+                if (dragHandle != null) {
+                    dragHandle()
                 }
+                content()
+                Spacer(modifier = Modifier.height(12.dp))
             }
         }
     }
@@ -381,7 +195,7 @@ fun AppModalBottomSheet(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SystemBottomSheet(sheetState: SheetState) {
+fun SystemBottomSheet() {
     val c = appColors()
     val scrollState = rememberScrollState()
     val viewParent = LocalView.current.parent
@@ -465,36 +279,20 @@ fun SystemBottomSheet(sheetState: SheetState) {
 
 @Composable
 fun NetSpeedBottomSheet(metrics: HomeMetricsState) {
-    val c = appColors()
     val scrollState = rememberScrollState()
     val viewParent = LocalView.current.parent
 
     val isDark = ThemeManager.shouldUseDarkTheme()
-    val downColor = if (isDark) Color(0xFF79C6FF) else Color(0xFF1E6EA8)
-    val upColor = if (isDark) Color(0xFF7DE3B5) else Color(0xFF12936A)
+    val downColor = if (isDark) Color(0xFF79C6FF) else Color(0xFF1472B6)
+    val upColor = if (isDark) Color(0xFF7DE3B5) else Color(0xFF0E8A63)
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 0.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp, bottom = 6.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .clearAndSetSemantics { }
-                    .size(width = 28.dp, height = 3.dp)
-                    .clip(Capsule())
-                    .background(c.divider.copy(alpha = 0.42f))
-            )
-        }
+        Spacer(modifier = Modifier.height(6.dp))
 
-        Spacer(modifier = Modifier.height(12.dp))
-        
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -510,34 +308,35 @@ fun NetSpeedBottomSheet(metrics: HomeMetricsState) {
                 .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedRectangle(18.dp))
-                    .background(c.cardAlt.copy(alpha = if (isDark) 0.58f else 0.72f))
+            // 实时速度卡片
+            top.yukonga.miuix.kmp.basic.Card(
+                modifier = Modifier.fillMaxWidth(),
+                cornerRadius = 18.dp,
+                insideMargin = PaddingValues(16.dp),
+                colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
+                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainerHigh
+                )
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    top.yukonga.miuix.kmp.basic.Text(
                         text = stringResource(R.string.bottomsheet_net_speed_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = c.textPrimary
+                        style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title4,
+                        fontWeight = FontWeight.Medium,
+                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        SpeedStatPill(
+                        NetSpeedStatCard(
                             icon = Icons.Filled.ArrowDownward,
                             label = stringResource(R.string.bottomsheet_net_speed_down),
                             value = metrics.netDown,
                             tint = downColor,
                             modifier = Modifier.weight(1f)
                         )
-                        SpeedStatPill(
+                        NetSpeedStatCard(
                             icon = Icons.Filled.ArrowUpward,
                             label = stringResource(R.string.bottomsheet_net_speed_up),
                             value = metrics.netUp,
@@ -545,68 +344,328 @@ fun NetSpeedBottomSheet(metrics: HomeMetricsState) {
                             modifier = Modifier.weight(1f)
                         )
                     }
-            
-            Spacer(modifier = Modifier.height(12.dp))
 
-                    SpeedSparkline(
+                    // 动画图表
+                    AnimatedSpeedChart(
                         downSeries = metrics.netDownHistory,
                         upSeries = metrics.netUpHistory,
                         downColor = downColor,
                         upColor = upColor,
-                        strokeWidth = 3.5f,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(132.dp)
+                            .height(140.dp)
                     )
                 }
             }
 
+            // 最快连接详情
             if (metrics.useClashApiForNetSpeed) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedRectangle(18.dp))
-                        .background(c.cardAlt.copy(alpha = if (isDark) 0.58f else 0.72f))
+                top.yukonga.miuix.kmp.basic.Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 18.dp,
+                    insideMargin = PaddingValues(14.dp),
+                    colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
+                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainerHigh
+                    )
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.bottomsheet_net_speed_details),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = c.textPrimary
-                        )
+                    NetSpeedConnectionDetail(
+                        icon = Icons.Filled.ArrowDownward,
+                        iconTint = downColor,
+                        title = stringResource(R.string.bottomsheet_net_speed_fastest_download),
+                        speed = metrics.netFastestDownSpeed,
+                        host = metrics.netFastestDownHost,
+                        chains = metrics.netFastestDownChains
+                    )
+                }
 
-                        FastestConnectionGroup(
-                            icon = Icons.Filled.ArrowDownward,
-                            iconTint = downColor,
-                            title = stringResource(R.string.bottomsheet_net_speed_fastest_download),
-                            speed = metrics.netFastestDownSpeed,
-                            host = metrics.netFastestDownHost,
-                            chains = metrics.netFastestDownChains
-                        )
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(1.dp)
-                                .background(c.divider.copy(alpha = 0.55f))
-                        )
-
-                        FastestConnectionGroup(
-                            icon = Icons.Filled.ArrowUpward,
-                            iconTint = upColor,
-                            title = stringResource(R.string.bottomsheet_net_speed_fastest_upload),
-                            speed = metrics.netFastestUpSpeed,
-                            host = metrics.netFastestUpHost,
-                            chains = metrics.netFastestUpChains
-                        )
-                    }
+                top.yukonga.miuix.kmp.basic.Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 18.dp,
+                    insideMargin = PaddingValues(14.dp),
+                    colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
+                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainerHigh
+                    )
+                ) {
+                    NetSpeedConnectionDetail(
+                        icon = Icons.Filled.ArrowUpward,
+                        iconTint = upColor,
+                        title = stringResource(R.string.bottomsheet_net_speed_fastest_upload),
+                        speed = metrics.netFastestUpSpeed,
+                        host = metrics.netFastestUpHost,
+                        chains = metrics.netFastestUpChains
+                    )
                 }
             }
+        }
+    }
+}
 
+@Composable
+private fun NetSpeedStatCard(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    tint: Color,
+    modifier: Modifier = Modifier
+) {
+    val bg = tint.copy(alpha = if (ThemeManager.shouldUseDarkTheme()) 0.12f else 0.08f)
+
+    Box(
+        modifier = modifier
+            .clip(RoundedRectangle(14.dp))
+            .background(bg)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            top.yukonga.miuix.kmp.basic.Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(18.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = label,
+                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote2,
+                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary
+                )
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = value,
+                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title4,
+                    fontWeight = FontWeight.SemiBold,
+                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NetSpeedConnectionDetail(
+    icon: ImageVector,
+    iconTint: Color,
+    title: String,
+    speed: String,
+    host: String,
+    chains: String
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            top.yukonga.miuix.kmp.basic.Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.size(8.dp))
+            top.yukonga.miuix.kmp.basic.Text(
+                text = title,
+                style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2,
+                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary,
+                modifier = Modifier.weight(1f)
+            )
+            top.yukonga.miuix.kmp.basic.Text(
+                text = speed,
+                style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1,
+                fontWeight = FontWeight.SemiBold,
+                color = iconTint
+            )
+        }
+        if (host.isNotBlank() && host != "-") {
+            top.yukonga.miuix.kmp.basic.Text(
+                text = host,
+                style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary,
+                modifier = Modifier.padding(start = 24.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (chains.isNotBlank() && chains != "-") {
+            top.yukonga.miuix.kmp.basic.Text(
+                text = chains,
+                style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote1,
+                color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary,
+                modifier = Modifier.padding(start = 24.dp),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * 带动画的速度图表，使用 spring 物理插值实现自然过渡。
+ * 渲染完全在 Canvas 内完成，每个数据点独立使用 Animatable 驱动，
+ * 配合渐变填充和平滑曲线实现流畅视觉效果。
+ */
+@Composable
+private fun AnimatedSpeedChart(
+    downSeries: List<Float>,
+    upSeries: List<Float>,
+    downColor: Color,
+    upColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val maxPoints = 30
+    val downPadded = remember(downSeries) {
+        if (downSeries.size >= maxPoints) downSeries.takeLast(maxPoints)
+        else List(maxPoints - downSeries.size) { 0f } + downSeries
+    }
+    val upPadded = remember(upSeries) {
+        if (upSeries.size >= maxPoints) upSeries.takeLast(maxPoints)
+        else List(maxPoints - upSeries.size) { 0f } + upSeries
+    }
+
+    val allMax = remember(downPadded, upPadded) {
+        (downPadded + upPadded).maxOrNull()?.coerceAtLeast(1f) ?: 1f
+    }
+
+    val downAnimValues = remember { List(maxPoints) { Animatable(0f) } }
+    val upAnimValues = remember { List(maxPoints) { Animatable(0f) } }
+
+    LaunchedEffect(downPadded, allMax) {
+        downPadded.forEachIndexed { i, v ->
+            val target = (v / allMax).coerceIn(0f, 1f)
+            launch {
+                downAnimValues[i].animateTo(
+                    targetValue = target,
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 220f)
+                )
+            }
+        }
+    }
+    LaunchedEffect(upPadded, allMax) {
+        upPadded.forEachIndexed { i, v ->
+            val target = (v / allMax).coerceIn(0f, 1f)
+            launch {
+                upAnimValues[i].animateTo(
+                    targetValue = target,
+                    animationSpec = spring(dampingRatio = 0.72f, stiffness = 220f)
+                )
+            }
+        }
+    }
+
+    val downGradient = listOf(downColor.copy(alpha = 0.25f), downColor.copy(alpha = 0f))
+    val upGradient = listOf(upColor.copy(alpha = 0.15f), upColor.copy(alpha = 0f))
+    val gridColor = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.outline.copy(alpha = 0.12f)
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val n = maxPoints
+        val padTop = 4f
+        val chartH = h - padTop
+
+        // 网格线 (3 条水平虚线)
+        for (row in 1..3) {
+            val gy = padTop + chartH * (row / 4f)
+            drawLine(
+                color = gridColor,
+                start = Offset(0f, gy),
+                end = Offset(w, gy),
+                strokeWidth = 1f,
+                pathEffect = PathEffect.dashPathEffect(
+                    intervals = floatArrayOf(6f, 4f)
+                )
+            )
+        }
+
+        fun buildPath(animValues: List<Animatable<Float, *>>): Path {
+            val p = Path()
+            if (n < 2) return p
+            fun pt(i: Int): Offset {
+                val x = (i.toFloat() / (n - 1)) * w
+                val y = padTop + chartH * (1f - animValues[i].value)
+                return Offset(x, y)
+            }
+            val first = pt(0)
+            p.moveTo(first.x, first.y)
+            for (i in 1 until n) {
+                val prev = pt(i - 1)
+                val cur = pt(i)
+                val cx = (prev.x + cur.x) / 2f
+                p.cubicTo(cx, prev.y, cx, cur.y, cur.x, cur.y)
+            }
+            return p
+        }
+
+        fun buildFillPath(animValues: List<Animatable<Float, *>>): Path {
+            val stroke = buildPath(animValues)
+            val fill = Path()
+            fill.addPath(stroke)
+            val lastX = ((n - 1).toFloat() / (n - 1)) * w
+            fill.lineTo(lastX, h)
+            fill.lineTo(0f, h)
+            fill.close()
+            return fill
+        }
+
+        // 绘制渐变填充
+        val downFill = buildFillPath(downAnimValues)
+        drawPath(
+            path = downFill,
+            brush = Brush.verticalGradient(
+                colors = downGradient,
+                startY = 0f,
+                endY = h
+            )
+        )
+        val upFill = buildFillPath(upAnimValues)
+        drawPath(
+            path = upFill,
+            brush = Brush.verticalGradient(
+                colors = upGradient,
+                startY = 0f,
+                endY = h
+            )
+        )
+
+        // 绘制曲线
+        val upStroke = buildPath(upAnimValues)
+        drawPath(
+            path = upStroke,
+            color = upColor,
+            style = Stroke(
+                width = 2.5f,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
+        val downStroke = buildPath(downAnimValues)
+        drawPath(
+            path = downStroke,
+            color = downColor,
+            style = Stroke(
+                width = 2.5f,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
+
+        // 最新数据点标记
+        if (n >= 2) {
+            val downLast = downAnimValues.last().value
+            val upLast = upAnimValues.last().value
+            if (downLast > 0.005f) {
+                val y = padTop + chartH * (1f - downLast)
+                drawCircle(color = downColor, radius = 3.5f, center = Offset(w, y))
+                drawCircle(color = Color.White, radius = 1.5f, center = Offset(w, y))
+            }
+            if (upLast > 0.005f) {
+                val y = padTop + chartH * (1f - upLast)
+                drawCircle(color = upColor, radius = 3.5f, center = Offset(w, y))
+                drawCircle(color = Color.White, radius = 1.5f, center = Offset(w, y))
+            }
         }
     }
 }
@@ -618,55 +677,33 @@ fun SubscriptionBottomSheet(
     isClashApiEnabled: Boolean,
     onOpenToolsSubscription: () -> Unit
 ) {
-    val c = appColors()
     val isDark = ThemeManager.shouldUseDarkTheme()
-    val normalColor = if (isDark) Color(0xFF58A6FF) else Color(0xFF0969DA)
-    val warnColor = if (isDark) Color(0xFFD29922) else Color(0xFF9A6700)
-    val criticalColor = if (isDark) Color(0xFFFF7B72) else Color(0xFFCF222E)
+    val normalColor = if (isDark) Color(0xFF79B8FF) else Color(0xFF1472B6)
+    val warnColor = if (isDark) Color(0xFFFFCC80) else Color(0xFFE67E22)
+    val criticalColor = if (isDark) Color(0xFFFF8A80) else Color(0xFFC62828)
+    val trackColor = if (isDark) Color(0xFF2A2A2A) else Color(0xFFE8E8E8)
 
     val viewParent = LocalView.current.parent
     val scrollState = rememberScrollState()
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 0.dp)
+            .padding(horizontal = 16.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp, bottom = 6.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .clearAndSetSemantics { }
-                    .size(width = 28.dp, height = 3.dp)
-                    .clip(Capsule())
-                    .background(c.divider.copy(alpha = 0.42f))
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         if (!isClashApiEnabled) {
-            OutlinedButton(
+            top.yukonga.miuix.kmp.basic.TextButton(
+                text = stringResource(R.string.bottomsheet_subscription_go_tools),
                 onClick = onOpenToolsSubscription,
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedRectangle(12.dp),
-                border = BorderStroke(1.dp, c.divider.copy(alpha = if (isDark) 0.24f else 0.32f)),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = c.textPrimary
-                )
-            ) {
-                Text(
-                    text = stringResource(R.string.bottomsheet_subscription_go_tools),
-                    style = MaterialTheme.typography.labelMedium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
+                cornerRadius = 14.dp,
+                colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.textButtonColorsPrimary()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
         }
-        
+
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -679,23 +716,23 @@ fun SubscriptionBottomSheet(
                     }
                     false
                 }
-                .verticalScroll(scrollState)
+                .verticalScroll(scrollState),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             if (items.isEmpty()) {
-                Text(
+                top.yukonga.miuix.kmp.basic.Text(
                     text = stringResource(R.string.bottomsheet_subscription_none),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = c.textSecondary
+                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body2,
+                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary,
+                    modifier = Modifier.padding(vertical = 20.dp)
                 )
             } else {
-                items.forEachIndexed { idx, item ->
+                items.forEach { item ->
                     val used = item.uploadBytes + item.downloadBytes
                     val remain = (item.totalBytes - used).coerceAtLeast(0L)
                     val progress = if (item.totalBytes > 0L) {
                         (used.toDouble() / item.totalBytes.toDouble()).toFloat().coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    }
+                    } else { 0f }
                     val remainRatio = if (item.totalBytes > 0L) (remain.toDouble() / item.totalBytes.toDouble()) else 1.0
                     val daysLeft = subscriptionDaysUntilExpiry(item.expiryDate)
 
@@ -706,124 +743,197 @@ fun SubscriptionBottomSheet(
                         else -> normalColor
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedRectangle(18.dp))
-                            .background(c.cardAlt.copy(alpha = if (isDark) 0.58f else 0.72f))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(
-                                start = 14.dp,
-                                end = 14.dp,
-                                top = 0.dp,
-                                bottom = 14.dp
-                            )
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = item.name,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = c.textPrimary,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-
-                                IconButton(
-                                    onClick = { onRefresh(item.url) },
-                                    enabled = !item.loading,
-                                    modifier = Modifier.alpha(if (item.loading) 0.45f else 1f)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Autorenew,
-                                        contentDescription = null,
-                                        tint = c.textSecondary
-                                    )
-                                }
-                            }
-
-                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = stringResource(R.string.bottomsheet_subscription_expires, subscriptionFormatExpiryWithDays(item.expiryDate)),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = c.textSecondary,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(
-                                    text = stringResource(R.string.bottomsheet_subscription_updated, subscriptionFormatTimeHm(item.lastUpdatedAtMs)),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = c.textSecondary
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = HomeMetricsApi.formatBytes(item.uploadBytes),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = c.textPrimary
-                                    )
-                                    Text(text = stringResource(R.string.bottomsheet_subscription_upload), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
-                                }
-                                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = HomeMetricsApi.formatBytes(item.downloadBytes),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = c.textPrimary
-                                    )
-                                    Text(text = stringResource(R.string.bottomsheet_subscription_download), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
-                                }
-                                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = HomeMetricsApi.formatBytes(remain),
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = c.textPrimary
-                                    )
-                                    Text(text = stringResource(R.string.bottomsheet_subscription_remaining), style = MaterialTheme.typography.bodySmall, color = c.textSecondary)
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Text(
-                                    text = stringResource(R.string.bottomsheet_subscription_used, HomeMetricsApi.formatBytes(used)),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = c.textSecondary,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(
-                                    text = stringResource(R.string.bottomsheet_subscription_total, HomeMetricsApi.formatBytes(item.totalBytes)),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = c.textSecondary
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-                            LinearProgressIndicator(
-                                progress = { progress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedRectangle(6.dp)),
-                                color = statusColor,
-                                trackColor = c.divider.copy(alpha = if (isDark) 0.14f else 0.20f)
-                            )
-                        }
-                    }
-                    
-                    if (idx != items.lastIndex) {
-                        Spacer(modifier = Modifier.height(12.dp))
-                    }
+                    SubItemCard(
+                        item = item,
+                        used = used,
+                        remain = remain,
+                        progress = progress,
+                        statusColor = statusColor,
+                        trackColor = trackColor,
+                        isDark = isDark,
+                        onRefresh = { onRefresh(item.url) }
+                    )
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SubItemCard(
+    item: SubscriptionItem,
+    used: Long,
+    remain: Long,
+    progress: Float,
+    statusColor: Color,
+    trackColor: Color,
+    isDark: Boolean,
+    onRefresh: () -> Unit
+) {
+    top.yukonga.miuix.kmp.basic.Card(
+        modifier = Modifier.fillMaxWidth(),
+        cornerRadius = 18.dp,
+        insideMargin = PaddingValues(0.dp),
+        colors = top.yukonga.miuix.kmp.basic.CardDefaults.defaultColors(
+            color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainerHigh
+        )
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // 标题行 + 刷新
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 8.dp, top = 14.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 左侧状态竖条 + 名称
+                Box(
+                    modifier = Modifier
+                        .size(width = 3.dp, height = 18.dp)
+                        .clip(RoundedRectangle(999.dp))
+                        .background(statusColor)
+                )
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = item.name,
+                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.title4,
+                    fontWeight = FontWeight.SemiBold,
+                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 10.dp)
+                )
+                top.yukonga.miuix.kmp.basic.IconButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.size(40.dp),
+                    enabled = !item.loading,
+                    cornerRadius = 12.dp,
+                    backgroundColor = Color.Transparent
+                ) {
+                    top.yukonga.miuix.kmp.basic.Icon(
+                        imageVector = Icons.Filled.Autorenew,
+                        contentDescription = null,
+                        tint = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary
+                            .copy(alpha = if (item.loading) 0.35f else 1f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            // 到期 / 更新时间
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = stringResource(R.string.bottomsheet_subscription_expires, subscriptionFormatExpiryWithDays(item.expiryDate)),
+                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote2,
+                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary
+                )
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = stringResource(R.string.bottomsheet_subscription_updated, subscriptionFormatTimeHm(item.lastUpdatedAtMs)),
+                    style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote2,
+                    color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // 流量三列
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                SubStatCell(
+                    label = stringResource(R.string.bottomsheet_subscription_upload),
+                    value = HomeMetricsApi.formatBytes(item.uploadBytes),
+                    modifier = Modifier.weight(1f)
+                )
+                SubStatCell(
+                    label = stringResource(R.string.bottomsheet_subscription_download),
+                    value = HomeMetricsApi.formatBytes(item.downloadBytes),
+                    modifier = Modifier.weight(1f)
+                )
+                SubStatCell(
+                    label = stringResource(R.string.bottomsheet_subscription_remaining),
+                    value = HomeMetricsApi.formatBytes(remain),
+                    valueColor = statusColor,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 进度条 + 已用/总量
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                top.yukonga.miuix.kmp.basic.LinearProgressIndicator(
+                    progress = progress,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedRectangle(4.dp)),
+                    colors = top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults.progressIndicatorColors(
+                        foregroundColor = statusColor,
+                        backgroundColor = trackColor
+                    )
+                )
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    top.yukonga.miuix.kmp.basic.Text(
+                        text = stringResource(R.string.bottomsheet_subscription_used, HomeMetricsApi.formatBytes(used)),
+                        style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote2,
+                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary,
+                        modifier = Modifier.weight(1f)
+                    )
+                    top.yukonga.miuix.kmp.basic.Text(
+                        text = stringResource(R.string.bottomsheet_subscription_total, HomeMetricsApi.formatBytes(item.totalBytes)),
+                        style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote2,
+                        color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubStatCell(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    valueColor: Color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurface
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedRectangle(12.dp))
+            .background(top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.surfaceContainer)
+            .padding(horizontal = 8.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        top.yukonga.miuix.kmp.basic.Text(
+            text = value,
+            style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.body1,
+            fontWeight = FontWeight.SemiBold,
+            color = valueColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        top.yukonga.miuix.kmp.basic.Text(
+            text = label,
+            style = top.yukonga.miuix.kmp.theme.MiuixTheme.textStyles.footnote2,
+            color = top.yukonga.miuix.kmp.theme.MiuixTheme.colorScheme.onSurfaceSecondary
+        )
     }
 }
 
@@ -912,12 +1022,12 @@ fun SpeedStatPill(
             Column {
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = c.textSecondary
                 )
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MiuixTheme.textStyles.title4,
                     fontWeight = FontWeight.SemiBold,
                     color = c.textPrimary
                 )
@@ -952,14 +1062,14 @@ fun FastestConnectionGroup(
 
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.footnote1,
                 color = c.textSecondary,
                 modifier = Modifier.weight(1f)
             )
 
             Text(
                 text = speed,
-                style = MaterialTheme.typography.labelLarge,
+                style = MiuixTheme.textStyles.button,
                 fontWeight = FontWeight.SemiBold,
                 color = iconTint
             )
@@ -967,14 +1077,14 @@ fun FastestConnectionGroup(
 
         Text(
             text = host,
-            style = MaterialTheme.typography.bodySmall,
+            style = MiuixTheme.textStyles.footnote1,
             color = c.textSecondary,
             modifier = Modifier.padding(start = 22.dp)
         )
 
         Text(
             text = chains,
-            style = MaterialTheme.typography.bodySmall,
+            style = MiuixTheme.textStyles.footnote1,
             color = c.textSecondary,
             modifier = Modifier.padding(start = 22.dp)
         )
@@ -998,7 +1108,7 @@ private fun ServiceDetailsCard(serviceInfo: BoxServiceInfo) {
         ) {
             Text(
                 text = stringResource(R.string.bottomsheet_service_details_title),
-                style = MaterialTheme.typography.titleMedium,
+                style = MiuixTheme.textStyles.title4,
                 fontWeight = FontWeight.SemiBold,
                 color = c.textPrimary
             )
@@ -1068,7 +1178,7 @@ private fun SystemEnvironmentCard(serviceInfo: BoxServiceInfo) {
         ) {
             Text(
                 text = stringResource(R.string.bottomsheet_system_environment_title),
-                style = MaterialTheme.typography.titleMedium,
+                style = MiuixTheme.textStyles.title4,
                 fontWeight = FontWeight.SemiBold,
                 color = c.textPrimary
             )
@@ -1132,7 +1242,7 @@ private fun ServiceInfoRow(
         
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MiuixTheme.textStyles.body2,
             color = c.textSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -1141,7 +1251,7 @@ private fun ServiceInfoRow(
         
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MiuixTheme.textStyles.body2,
             fontWeight = FontWeight.Medium,
             color = c.textPrimary,
             maxLines = 1,
@@ -1465,7 +1575,7 @@ fun UpdateBottomSheet(
                     mode == UpdateSheetMode.APP -> stringResource(R.string.bottomsheet_app_update_available)
                     else -> stringResource(R.string.bottomsheet_update_available)
                 },
-                style = MaterialTheme.typography.headlineSmall,
+                style = MiuixTheme.textStyles.title2,
                 fontWeight = FontWeight.Bold,
                 color = c.textPrimary,
                 modifier = Modifier.padding(horizontal = 4.dp)
@@ -1483,13 +1593,13 @@ fun UpdateBottomSheet(
                 ) {
                     Text(
                         text = stringResource(R.string.bottomsheet_current_version),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MiuixTheme.textStyles.title4,
                         fontWeight = FontWeight.SemiBold,
                         color = c.textPrimary
                     )
                     Text(
                         text = updateResult.currentVersion,
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MiuixTheme.textStyles.body1,
                         color = c.textSecondary
                     )
                 }
@@ -1523,7 +1633,7 @@ fun UpdateBottomSheet(
                     ) {
                         Text(
                             text = stringResource(R.string.bottomsheet_no_app_asset),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MiuixTheme.textStyles.body2,
                             color = c.textSecondary,
                             modifier = Modifier.padding(16.dp)
                         )
@@ -1600,7 +1710,7 @@ fun UpdateBottomSheet(
                     ) {
                         Text(
                             text = "🎉",
-                            style = MaterialTheme.typography.headlineMedium
+                            style = MiuixTheme.textStyles.title1
                         )
                         Text(
                             text = if (mode == UpdateSheetMode.APP) {
@@ -1608,13 +1718,13 @@ fun UpdateBottomSheet(
                             } else {
                                 stringResource(R.string.bottomsheet_latest_version_title)
                             },
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MiuixTheme.textStyles.title4,
                             fontWeight = FontWeight.SemiBold,
                             color = c.textPrimary
                         )
                         Text(
                             text = stringResource(R.string.bottomsheet_no_updates_available),
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MiuixTheme.textStyles.body2,
                             color = c.textSecondary,
                             textAlign = TextAlign.Center
                         )
@@ -1650,7 +1760,7 @@ private fun UpdateAppReleaseCard(
         ) {
             Text(
                 text = stringResource(R.string.bottomsheet_app_release_latest),
-                style = MaterialTheme.typography.titleMedium,
+                style = MiuixTheme.textStyles.title4,
                 fontWeight = FontWeight.SemiBold,
                 color = c.textPrimary
             )
@@ -1661,7 +1771,7 @@ private fun UpdateAppReleaseCard(
                         R.string.bottomsheet_release_version,
                         release.name.ifBlank { release.tag }
                     ),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MiuixTheme.textStyles.body2,
                     color = c.textPrimary
                 )
 
@@ -1669,7 +1779,7 @@ private fun UpdateAppReleaseCard(
                     val formattedDate = formatPublishDate(release.publishedAt)
                     Text(
                         text = stringResource(R.string.bottomsheet_release_date, formattedDate),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = c.textSecondary
                     )
                 }
@@ -1683,14 +1793,14 @@ private fun UpdateAppReleaseCard(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = stringResource(R.string.bottomsheet_release_notes),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MiuixTheme.textStyles.body2,
                         fontWeight = FontWeight.Medium,
                         color = c.textPrimary
                     )
 
                     Text(
                         text = formattedBody,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = c.textSecondary,
                         maxLines = if (notesExpanded) Int.MAX_VALUE else 10,
                         overflow = if (notesExpanded) TextOverflow.Clip else TextOverflow.Ellipsis
@@ -1728,7 +1838,7 @@ private fun UpdateAppReleaseCard(
                 ) {
                     Text(
                         text = stringResource(R.string.bottomsheet_view_in_browser),
-                        style = MaterialTheme.typography.labelMedium
+                        style = MiuixTheme.textStyles.footnote1
                     )
                 }
 
@@ -1750,7 +1860,7 @@ private fun UpdateAppReleaseCard(
                             }
                             else -> stringResource(R.string.bottomsheet_download_app)
                         },
-                        style = MaterialTheme.typography.labelMedium
+                        style = MiuixTheme.textStyles.footnote1
                     )
                 }
             }
@@ -1801,7 +1911,7 @@ private fun UpdateReleaseCard(
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MiuixTheme.textStyles.title4,
                     fontWeight = FontWeight.SemiBold,
                     color = c.textPrimary
                 )
@@ -1817,7 +1927,7 @@ private fun UpdateReleaseCard(
                     ) {
                         Text(
                             text = stringResource(R.string.bottomsheet_release_recommended),
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MiuixTheme.textStyles.footnote2,
                             color = Color.White,
                             fontWeight = FontWeight.Medium
                         )
@@ -1828,14 +1938,14 @@ private fun UpdateReleaseCard(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = stringResource(R.string.bottomsheet_release_version, versionText),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MiuixTheme.textStyles.body2,
                     color = c.textPrimary
                 )
 
                 if (release.commitSha.isNotBlank()) {
                     Text(
                         text = stringResource(R.string.bottomsheet_release_commit, release.commitSha),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = c.textSecondary
                     )
                 }
@@ -1844,7 +1954,7 @@ private fun UpdateReleaseCard(
                     val formattedDate = formatPublishDate(release.publishedAt)
                     Text(
                         text = stringResource(R.string.bottomsheet_release_date, formattedDate),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = c.textSecondary
                     )
                 }
@@ -1855,7 +1965,7 @@ private fun UpdateReleaseCard(
                             R.string.bottomsheet_release_type,
                             if (release.isPrerelease) stringResource(R.string.bottomsheet_release_type_prerelease) else stringResource(R.string.bottomsheet_release_type_stable)
                         ),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = c.textSecondary
                     )
                 }
@@ -1869,14 +1979,14 @@ private fun UpdateReleaseCard(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
                         text = stringResource(R.string.bottomsheet_release_notes),
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MiuixTheme.textStyles.body2,
                         fontWeight = FontWeight.Medium,
                         color = c.textPrimary
                     )
 
                     Text(
                         text = formattedBody,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = c.textSecondary,
                         maxLines = if (notesExpanded) Int.MAX_VALUE else 10,
                         overflow = if (notesExpanded) TextOverflow.Clip else TextOverflow.Ellipsis
@@ -1912,11 +2022,11 @@ private fun UpdateReleaseCard(
                 ) {
                     Text(
                         text = "⚠️",
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MiuixTheme.textStyles.body2
                     )
                     Text(
                         text = stringResource(R.string.bottomsheet_release_prerelease_warning),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = if (isDark) Color(0xFFFBBF24) else Color(0xFF92400E)
                     )
                 }
@@ -1938,7 +2048,7 @@ private fun UpdateReleaseCard(
                 ) {
                     Text(
                         text = stringResource(R.string.bottomsheet_view_in_browser),
-                        style = MaterialTheme.typography.labelMedium
+                        style = MiuixTheme.textStyles.footnote1
                     )
                 }
 
@@ -1960,7 +2070,7 @@ private fun UpdateReleaseCard(
                             }
                             else -> downloadButtonText
                         },
-                        style = MaterialTheme.typography.labelMedium
+                        style = MiuixTheme.textStyles.footnote1
                     )
                 }
             }
@@ -1986,184 +2096,6 @@ private fun formatReleaseBody(body: String): String {
         .replace("**", "")
         .replace("*", "")
         .trim()
-}
-
-@Composable
-fun AboutBottomSheet(
-    appVersion: String,
-    moduleVersion: String,
-    appIcon: Any? = null,
-    onModuleClick: () -> Unit = {},
-    onChannelClick: () -> Unit = {},
-    onAppVersionClick: (() -> Unit)? = null,
-    onModuleVersionClick: () -> Unit = {}
-) {
-    val c = appColors()
-    val isDark = ThemeManager.shouldUseDarkTheme()
-    val scrollState = rememberScrollState()
-    val viewParent = LocalView.current.parent
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 0.dp)
-    ) {
-        // Handle
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 10.dp, bottom = 6.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .clearAndSetSemantics { }
-                    .size(width = 28.dp, height = 3.dp)
-                    .clip(Capsule())
-                    .background(c.divider.copy(alpha = 0.42f))
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .pointerInteropFilter { ev ->
-                    when (ev.actionMasked) {
-                        android.view.MotionEvent.ACTION_DOWN,
-                        android.view.MotionEvent.ACTION_MOVE -> viewParent?.requestDisallowInterceptTouchEvent(true)
-                        android.view.MotionEvent.ACTION_UP,
-                        android.view.MotionEvent.ACTION_CANCEL -> viewParent?.requestDisallowInterceptTouchEvent(false)
-                    }
-                    false
-                }
-                .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            // App Icon and Title Section
-            Column(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                // App Icon
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedRectangle(18.dp))
-                        .background(c.cardAlt),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (appIcon is Painter) {
-                        androidx.compose.foundation.Image(
-                            painter = appIcon,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedRectangle(14.dp))
-                        )
-                    } else {
-                        // Fallback icon
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedRectangle(14.dp))
-                                .background(Color(0xFF2DA44E).copy(alpha = 0.1f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = stringResource(R.string.bottomsheet_about_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF2DA44E)
-                            )
-                        }
-                    }
-                }
-
-                // App Name and Version
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(0.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.bottomsheet_about_title),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = c.textPrimary
-                    )
-                    Text(
-                        text = appVersion,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = c.textSecondary,
-                        modifier = if (onAppVersionClick != null) {
-                            Modifier
-                                .clip(RoundedRectangle(8.dp))
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = onAppVersionClick
-                                )
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        } else {
-                            Modifier
-                        }
-                    )
-                }
-            }
-
-            // Divider
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.3f)
-                    .height(1.dp)
-                    .padding(vertical = 2.dp)
-                    .background(c.divider.copy(alpha = 0.3f))
-            )
-
-            // Version Information Card
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedRectangle(18.dp))
-                    .background(c.cardAlt.copy(alpha = if (isDark) 0.58f else 0.72f))
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    AboutInfoRow(
-                        icon = Icons.Filled.Info,
-                        label = stringResource(R.string.bottomsheet_about_module),
-                        value = stringResource(R.string.bottomsheet_about_value_github),
-                        onClick = onModuleClick
-                    )
-                    
-                    AboutInfoRow(
-                        icon = Icons.Filled.Code,
-                        label = stringResource(R.string.bottomsheet_about_channel),
-                        value = stringResource(R.string.bottomsheet_about_value_telegram),
-                        onClick = onChannelClick
-                    )
-                    
-                    AboutInfoRow(
-                        icon = Icons.Filled.Computer,
-                        label = stringResource(R.string.bottomsheet_about_module_version),
-                        value = moduleVersion,
-                        onClick = onModuleVersionClick
-                    )
-                    
-                    AboutInfoRow(
-                        icon = Icons.Filled.Person,
-                        label = stringResource(R.string.bottomsheet_about_author),
-                        value = stringResource(R.string.bottomsheet_about_value_author)
-                    )
-                }
-            }
-        }
-    }
 }
 
 @Composable
@@ -2207,14 +2139,14 @@ private fun AboutInfoRow(
             
             Text(
                 text = label,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MiuixTheme.textStyles.body2,
                 color = c.textSecondary
             )
         }
         
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MiuixTheme.textStyles.body2,
             fontWeight = FontWeight.Medium,
             color = if (onClick != null) {
                 // 鍙偣鍑婚」鐩娇鐢╝ccent棰滆壊

@@ -7,5 +7,6 @@ data class HomeServiceState(
     val uptimeText: String = "-",
     val coreDisplayName: String = "-",
     val networkMode: String = "-",
-    val ipv6Text: String = "-"
+    val ipv6Text: String = "-",
+    val dnsMode: String = "-"
 )

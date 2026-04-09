@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.interaction.InteractionSource
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,13 +27,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
-import androidx.compose.material3.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -57,11 +50,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.box.app.ui.miuix.HyperCard
+import top.yukonga.miuix.kmp.shapes.SmoothRoundedCornerShape
+import com.box.app.ui.miuix.HyperSwitch
 import com.box.app.ui.theme.appColors
 import com.box.app.utils.AppIcon
 import com.box.app.utils.ThemeManager
 import com.kyant.shapes.Capsule
 import com.kyant.shapes.RoundedRectangle
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Text
 
 val LocalFloatingNavBarSpaceDp = staticCompositionLocalOf { 64.dp }
 val LocalNavigationBarsPaddingEnabled = staticCompositionLocalOf { true }
@@ -166,7 +164,7 @@ fun MiniBadge(text: String, color: Color? = null) {
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelMedium,
+            style = MiuixTheme.textStyles.footnote1,
             color = textColor,
             fontWeight = FontWeight.Medium
         )
@@ -181,7 +179,7 @@ fun StatusBadge(
 ) {
     val c = appColors()
     val backgroundColor = if (isActive) {
-        MaterialTheme.colorScheme.primary
+        MiuixTheme.colorScheme.primary
     } else {
         c.cardAlt
     }
@@ -200,7 +198,7 @@ fun StatusBadge(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelSmall,
+            style = MiuixTheme.textStyles.footnote2,
             color = textColor,
             fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Medium
         )
@@ -270,12 +268,12 @@ fun ToolsFileRow(
         ) {
             Text(
                 text = fileName,
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.body1,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.footnote1,
                 color = c.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -289,7 +287,7 @@ fun ToolsFileRow(
 
         Text(
             text = ">",
-            style = MaterialTheme.typography.titleMedium,
+            style = MiuixTheme.textStyles.title4,
             color = c.textSecondary.copy(alpha = 0.75f)
         )
     }
@@ -324,20 +322,20 @@ fun ToolsSubHeader(
             ) {
                 Text(
                     text = "< Back",
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MiuixTheme.textStyles.button,
                     color = c.textPrimary
                 )
             }
         }
         Text(
             text = title,
-            style = MaterialTheme.typography.headlineMedium,
+            style = MiuixTheme.textStyles.title1,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(top = 12.dp)
         )
         Text(
             text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MiuixTheme.textStyles.body2,
             color = c.textSecondary,
             modifier = Modifier.padding(top = 6.dp)
         )
@@ -347,22 +345,19 @@ fun ToolsSubHeader(
 @Composable
 fun ToolsSearchCard(hint: String) {
     val c = appColors()
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedRectangle(18.dp),
-        colors = CardDefaults.cardColors(containerColor = c.card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    HyperCard(
+        modifier = Modifier.fillMaxWidth()
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedRectangle(18.dp))
+                .clip(SmoothRoundedCornerShape(18.dp))
                 .background(c.cardAlt)
                 .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             Text(
                 text = hint,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MiuixTheme.textStyles.body2,
                 color = c.textSecondary
             )
         }
@@ -376,23 +371,21 @@ fun ToolsSectionCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val c = appColors()
-    Card(
+    HyperCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedRectangle(18.dp),
-        colors = CardDefaults.cardColors(containerColor = c.card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        insideMargin = PaddingValues(16.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MiuixTheme.textStyles.title4,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
                         text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = c.textSecondary
                     )
                 }
@@ -453,12 +446,12 @@ fun ToolsRowIcon(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.body1,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.footnote1,
                 color = c.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -472,7 +465,7 @@ fun ToolsRowIcon(
 
         Text(
             text = ">",
-            style = MaterialTheme.typography.titleMedium,
+            style = MiuixTheme.textStyles.title4,
             color = c.textSecondary.copy(alpha = 0.75f)
         )
     }
@@ -561,12 +554,12 @@ fun ToolsRowBitmapIcon(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.body1,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.footnote1,
                 color = c.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -575,7 +568,7 @@ fun ToolsRowBitmapIcon(
 
         Text(
             text = ">",
-            style = MaterialTheme.typography.titleMedium,
+            style = MiuixTheme.textStyles.title4,
             color = c.textSecondary.copy(alpha = 0.75f)
         )
     }
@@ -602,13 +595,7 @@ fun SettingsToggleRow(
     showDivider: Boolean = true
 ) {
     val c = appColors()
-    val isDark = ThemeManager.shouldUseDarkTheme()
     val interactionSource = remember { MutableInteractionSource() }
-
-    val checkedTrack = if (isDark) Color(0xFF1F6FEB) else Color(0xFF0969DA)
-    val checkedThumb = Color.White
-    val uncheckedTrack = c.cardAlt
-    val uncheckedThumb = if (isDark) Color(0xFF8B949E) else Color(0xFF6E7781)
 
     Row(
         modifier = Modifier
@@ -646,30 +633,22 @@ fun SettingsToggleRow(
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.body1,
                 fontWeight = FontWeight.SemiBold
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.footnote1,
                 color = c.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
 
-        Switch(
+        HyperSwitch(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            enabled = enabled,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = checkedThumb,
-                checkedTrackColor = checkedTrack,
-                checkedBorderColor = Color.Transparent,
-                uncheckedThumbColor = uncheckedThumb,
-                uncheckedTrackColor = uncheckedTrack,
-                uncheckedBorderColor = Color.Transparent
-            )
+            enabled = enabled
         )
     }
 

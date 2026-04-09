@@ -38,7 +38,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -276,7 +276,7 @@ fun SubStoreScreen(
             title = {
                 Text(
                     text = stringResource(R.string.web_action_clear_cache),
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MiuixTheme.textStyles.title2,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                     color = c.textPrimary
                 )
@@ -284,7 +284,7 @@ fun SubStoreScreen(
             text = {
                 Text(
                     text = stringResource(R.string.web_action_clear_cache_confirm_message),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MiuixTheme.textStyles.body2,
                     color = c.textSecondary
                 )
             },
@@ -379,7 +379,7 @@ fun SubStoreScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(c.pageBg)
+            
             .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
         // Background content (WebView / states)
@@ -404,7 +404,7 @@ fun SubStoreScreen(
                         )
                         Text(
                             text = stringResource(R.string.substore_loading),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MiuixTheme.textStyles.body1,
                             color = c.textSecondary
                         )
                     }
@@ -420,7 +420,7 @@ fun SubStoreScreen(
                     ) {
                         Text(
                             text = subStoreError!!,
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MiuixTheme.textStyles.body1,
                             color = c.textSecondary
                         )
                         TextButton(
@@ -441,7 +441,7 @@ fun SubStoreScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.substore_unavailable),
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MiuixTheme.textStyles.body1,
                             color = c.textSecondary
                         )
                         TextButton(
@@ -484,7 +484,7 @@ fun SubStoreScreen(
                 ) {
                     Text(
                         text = subStoreWebError!!,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = c.textSecondary
                     )
                 }
@@ -495,7 +495,7 @@ fun SubStoreScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(c.pageBg)
+                
                 .height(topInset + topBarHeight)
                 .padding(top = topInset, start = 0.dp, end = 0.dp)
                 .clickable(
@@ -517,7 +517,7 @@ fun SubStoreScreen(
 
             Text(
                 text = pageTitle?.takeIf { it.isNotBlank() } ?: stringResource(R.string.substore_title),
-                style = MaterialTheme.typography.titleLarge,
+                style = MiuixTheme.textStyles.title2,
                 color = c.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -625,7 +625,7 @@ fun SubStoreScreen(
 
                     Text(
                         text = stringResource(R.string.substore_panel_sheet_title),
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MiuixTheme.textStyles.title4,
                         fontWeight = FontWeight.SemiBold,
                         color = c.textPrimary
                     )
@@ -668,7 +668,7 @@ fun SubStoreScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = p.name,
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = MiuixTheme.textStyles.body1,
                                         color = c.textPrimary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -683,7 +683,7 @@ fun SubStoreScreen(
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = displayUrl,
-                                            style = MaterialTheme.typography.bodySmall,
+                                            style = MiuixTheme.textStyles.footnote1,
                                             color = c.textSecondary,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -746,21 +746,21 @@ fun SubStoreScreen(
                     ) {
                         Text(
                             text = stringResource(R.string.substore_panel_sheet_add_title),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MiuixTheme.textStyles.body1,
                             color = c.textPrimary
                         )
 
                         if (!addError.isNullOrBlank()) {
                             Text(
                                 text = addError!!,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
+                                style = MiuixTheme.textStyles.footnote1,
+                                color = MiuixTheme.colorScheme.error
                             )
                         }
 
                         Text(
                             text = stringResource(R.string.substore_panel_sheet_field_name),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.footnote1,
                             color = c.textSecondary
                         )
 
@@ -782,7 +782,7 @@ fun SubStoreScreen(
                                 singleLine = true,
                                 textStyle = androidx.compose.ui.text.TextStyle(
                                     color = c.textPrimary,
-                                    fontSize = MaterialTheme.typography.bodyLarge.fontSize
+                                    fontSize = MiuixTheme.textStyles.body1.fontSize
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -790,14 +790,14 @@ fun SubStoreScreen(
                                 Text(
                                     text = stringResource(R.string.substore_panel_sheet_field_name),
                                     color = c.textSecondary,
-                                    style = MaterialTheme.typography.bodyLarge
+                                    style = MiuixTheme.textStyles.body1
                                 )
                             }
                         }
 
                         Text(
                             text = stringResource(R.string.substore_panel_sheet_field_url),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.footnote1,
                             color = c.textSecondary
                         )
 
@@ -819,7 +819,7 @@ fun SubStoreScreen(
                                 singleLine = true,
                                 textStyle = androidx.compose.ui.text.TextStyle(
                                     color = c.textPrimary,
-                                    fontSize = MaterialTheme.typography.bodyLarge.fontSize
+                                    fontSize = MiuixTheme.textStyles.body1.fontSize
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -827,7 +827,7 @@ fun SubStoreScreen(
                                 Text(
                                     text = stringResource(R.string.substore_panel_sheet_field_url),
                                     color = c.textSecondary,
-                                    style = MaterialTheme.typography.bodyLarge
+                                    style = MiuixTheme.textStyles.body1
                                 )
                             }
                         }
@@ -849,7 +849,7 @@ fun SubStoreScreen(
                                 Text(
                                     text = stringResource(R.string.action_add),
                                     color = accent,
-                                    style = MaterialTheme.typography.labelLarge
+                                    style = MiuixTheme.textStyles.button
                                 )
                             }
                         }

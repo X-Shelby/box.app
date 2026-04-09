@@ -49,6 +49,8 @@ fun buildAppIconImageLoader(context: Context): ImageLoader {
         .components {
             add(AppIconKeyer())
             add(AppIconFetcher.Factory(context))
+            // 注册 OkHttp 网络 fetcher，支持远程图片加载（核心图标等）
+            add(coil3.network.okhttp.OkHttpNetworkFetcherFactory())
         }
         .build()
 }

@@ -25,7 +25,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material3.MaterialTheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
@@ -166,7 +166,7 @@ fun OpenSourceLicensesScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(c.pageBg)
+            
             .imePadding()
     ) {
         LazyColumn(
@@ -192,7 +192,7 @@ fun OpenSourceLicensesScreen(
                         if (libs == null) {
                             Text(
                                 text = loadResult.second,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MiuixTheme.textStyles.footnote1,
                                 color = c.textSecondary
                             )
                         }
@@ -276,7 +276,7 @@ private fun LicensesFloatingTopBar(
                 Text(
                     text = stringResource(R.string.tools_update_back_compact),
                     color = c.textPrimary,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MiuixTheme.textStyles.button,
                     fontWeight = FontWeight.SemiBold
                 )
             }

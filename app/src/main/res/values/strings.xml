@@ -44,20 +44,30 @@
     <string name="onboarding_permissions_title">Permissions</string>
     <string name="onboarding_permissions_open_settings">System settings</string>
     <string name="onboarding_perm_request">Grant</string>
+    <string name="onboarding_required_permissions">Required</string>
     <string name="onboarding_perm_root_title">Root access</string>
     <string name="onboarding_perm_root_desc">Required. Used to control Box service and apply system network rules.</string>
+    <string name="onboarding_perm_root_summary">Tap to grant root permission</string>
+    <string name="onboarding_perm_granted">Granted</string>
+    <string name="onboarding_perm_requesting">Requesting…</string>
+    <string name="onboarding_root_denied">Root denied. Please grant in root manager.</string>
     <string name="onboarding_perm_notifications_title">Notifications</string>
     <string name="onboarding_perm_notifications_desc">Optional. Only requested when you enable notification-related features.</string>
+    <string name="onboarding_perm_notifications_summary">Service status and alerts</string>
     <string name="onboarding_perm_apps_title">Installed apps list</string>
-    <string name="onboarding_perm_apps_desc">Optional. Used for app list allow/block rules. On some systems, you need to manually grant “installed apps list” access in system settings.</string>
+    <string name="onboarding_perm_apps_desc">Optional. Used for app list allow/block rules. On some systems, you need to manually grant "installed apps list" access in system settings.</string>
+    <string name="onboarding_perm_apps_summary">For app proxy rules</string>
     <string name="onboarding_perm_wifi_title">Wi‑Fi matching</string>
     <string name="onboarding_perm_wifi_desc">Optional. Location / Nearby devices permissions may be required for scanning nearby Wi‑Fi and hotspots.</string>
+    <string name="onboarding_perm_wifi_summary">Scan nearby Wi‑Fi networks</string>
 
     <string name="onboarding_usage_title">How to use</string>
     <string name="onboarding_usage_body">On the Home page, the service status card contains a small panel on the right where you can switch Core, Mode, and IPv6 (requires the service to be stopped).\n\nIn Network Control:\n- Tap the icon before a row to scan nearby Wi‑Fi. Or scan devices connected to your hotspot</string>
     <string name="onboarding_tips_title">Usage tips</string>
     <string name="onboarding_tips_body">It is recommended to stop the service before updating.\n\nTools:\n- Update Core / Subscription / WebUI / CNIP: tap the right icon to download updates\n\nSettings:\n- Check for module updates at the module version</string>
     <string name="onboarding_finish">Finish</string>
+    <string name="onboarding_continue">Continue</string>
+    <string name="onboarding_optional_permissions_hint">You can set the following optional permissions later</string>
 
     <!-- Quick Settings / Foreground service -->
     <string name="qs_tile_service_label">Box Service</string>
@@ -142,7 +152,7 @@
     <string name="home_ip_geo_sheet_subtitle">IPv4 and IPv6 detection details</string>
     <string name="home_ip_geo_ipv4_title">IPv4</string>
     <string name="home_ip_geo_ipv6_title">IPv6</string>
-    <string name="home_ip_geo_loading">Loading...</string>
+    <string name="home_ip_geo_loading">Loading</string>
     <string name="home_ip_geo_unavailable">Unavailable</string>
     <string name="home_ip_geo_field_ip">IP</string>
     <string name="home_ip_geo_field_location">Location</string>
@@ -179,6 +189,7 @@
     <string name="home_core_label">Core</string>
     <string name="home_mode_label">Mode</string>
     <string name="home_ipv6_label">IPv6</string>
+    <string name="home_dns_label">DNS</string>
     <string name="home_placeholder_dash">—</string>
 
     <string name="home_action_start">Start</string>
@@ -249,6 +260,15 @@
     <string name="settings_blur_effects">Blur effects</string>
     <string name="settings_blur_effects_subtitle">Enable liquid glass and backdrop blur effects</string>
     <string name="settings_blur_effects_unsupported_subtitle">Requires Android 12 or above</string>
+    <string name="settings_liquid_glass_nav_bar">Liquid glass navigation bar</string>
+    <string name="settings_liquid_glass_nav_bar_subtitle">Use floating pill with glass blur effects</string>
+    <string name="settings_hyperx_nav_transitions">HyperX navigation transitions</string>
+    <string name="settings_hyperx_nav_transitions_subtitle">Spring-based page transitions, faster and more fluid</string>
+    <string name="settings_maple_font_logs">Maple Font for logs</string>
+    <string name="settings_maple_font_logs_subtitle">Use Maple Mono CN monospace font for log content</string>
+    <string name="settings_maple_font_logs_downloading">Downloading font…</string>
+    <string name="settings_maple_font_logs_ready">Font ready</string>
+    <string name="settings_maple_font_logs_failed">Download failed, please retry</string>
     <string name="settings_liquid_glass_lens_strength">Lens strength</string>
     <string name="settings_liquid_glass_lens_strength_subtitle">Adjust glass refraction intensity</string>
     <string name="settings_liquid_glass_blur_strength">Blur strength</string>
@@ -470,6 +490,9 @@
     <string name="tools_network_control_hotspot_mac_picker_empty">No clients</string>
     <string name="tools_network_control_hotspot_mac_picker_error">Failed to load clients</string>
     <string name="tools_network_control_append_item">Append a new item</string>
+    <string name="tools_network_control_quick_fill_current">Current WiFi</string>
+    <string name="tools_network_control_quick_paste">Paste</string>
+    <string name="tools_network_control_quick_clear">Clear all</string>
     <string name="tools_network_control_wifi_picker_title">Nearby Wi-Fi</string>
     <string name="tools_network_control_wifi_picker_loading">Scanning…</string>
     <string name="tools_network_control_wifi_picker_empty">No Wi-Fi found</string>
@@ -478,6 +501,29 @@
     <string name="tools_network_control_wifi_picker_location_required">Please turn on Location to scan nearby Wi-Fi</string>
     <string name="tools_network_control_load_failed">Load failed</string>
     <string name="tools_network_control_save_failed">Save failed</string>
+    <string name="tools_network_control_clash_section_title">Clash API</string>
+    <string name="tools_network_control_clash_section_subtitle">Controller · selectors · rules · connections</string>
+    <string name="tools_network_control_clash_load_failed">Failed to load Clash API</string>
+    <string name="tools_network_control_clash_action_failed">Clash API action failed</string>
+    <string name="tools_network_control_clash_unavailable">Clash API unavailable</string>
+    <string name="tools_network_control_controller_title">External controller</string>
+    <string name="tools_network_control_controller_auth_on">Secret enabled</string>
+    <string name="tools_network_control_controller_auth_off">No secret</string>
+    <string name="tools_network_control_mode_title">Mode</string>
+    <string name="tools_network_control_mode_subtitle">Switch Clash running mode</string>
+    <string name="tools_network_control_log_level_title">Log level</string>
+    <string name="tools_network_control_log_level_subtitle">Adjust core log verbosity</string>
+    <string name="tools_network_control_reload_config_title">Reload core config</string>
+    <string name="tools_network_control_reload_config_subtitle">Force reload via Clash API</string>
+    <string name="tools_network_control_selector_section_title">Proxy groups</string>
+    <string name="tools_network_control_selector_section_subtitle">Switch selector targets directly from Clash API</string>
+    <string name="tools_network_control_provider_sheet_title">Providers</string>
+    <string name="tools_network_control_rules_sheet_title">Rules</string>
+    <string name="tools_network_control_connections_sheet_title">Connections</string>
+    <string name="tools_network_control_connections_empty">No active connections</string>
+    <string name="tools_network_control_provider_label">Providers</string>
+    <string name="tools_network_control_selector_label">Selectors</string>
+    <string name="tools_network_control_connections_label">Connections</string>
     <string name="tools_update_core_title">Core</string>
     <string name="tools_update_core_subtitle_choose_channel">Choose a core channel</string>
     <string name="tools_update_core_section_title">Core</string>
@@ -530,6 +576,17 @@
     <string name="tools_logs_status_available">Available</string>
     <string name="tools_logs_status_current">Current</string>
     <string name="tools_logs_no_files">No log files</string>
+    <string name="tools_logs_section_source">Log Source</string>
+    <string name="tools_logs_section_view">View Mode</string>
+    <string name="tools_logs_tab_module">Module Logs</string>
+    <string name="tools_logs_tab_detail">Detailed Logs</string>
+    <string name="tools_logs_log_file">Log file</string>
+    <string name="tools_logs_log_directory">Path: %1$s</string>
+    <string name="tools_logs_recent_lines">Latest %1$d lines</string>
+    <string name="tools_logs_live">Live</string>
+    <string name="tools_logs_static">Static</string>
+    <string name="tools_logs_no_content">No log content</string>
+    <string name="tools_logs_detail_hint">Supports text selection and still follows the log font setting.</string>
     <string name="tools_logs_delete_dialog_title">Delete log file?</string>
     <string name="tools_logs_delete_dialog_body">This will permanently delete %1$s from %2$s.</string>
 
@@ -561,6 +618,8 @@
     <string name="tools_config_delete_folder_warning">This will delete the folder and all its contents.</string>
     <string name="tools_config_delete_file_warning">This action cannot be undone.</string>
 
+    <string name="tools_config_tab_manage">Manage</string>
+    <string name="tools_config_tab_select">Select</string>
     <string name="tools_config_files_folders_title">Files &amp; Folders</string>
     <string name="tools_config_loading">Loading...</string>
     <string name="tools_config_no_results_found">No results found</string>
@@ -600,6 +659,8 @@
 
     <!-- Tools / Apps -->
     <string name="tools_apps_title">Apps</string>
+    <string name="tools_apps_hint_unsaved">You have unsaved changes. Tap the save button to apply.</string>
+    <string name="tools_apps_hint_restart">Settings saved. Restart the service to apply changes.</string>
     <string name="tools_apps_proxy_blacklist">Blacklist</string>
     <string name="tools_apps_proxy_whitelist">Whitelist</string>
     <string name="tools_apps_proxy_core">Core</string>
@@ -618,6 +679,7 @@
     <string name="tools_apps_no_results">No results</string>
     <string name="tools_apps_user_fallback">User %1$d</string>
     <string name="tools_apps_failed_update_proxy_mode">Failed to update proxy_mode</string>
+    <string name="tools_apps_failed_apply_config">Failed to restart the service to apply app rules</string>
     <string name="tools_apps_selected_count">(%1$d)</string>
     <string name="tools_apps_restart_tip_title">Restart required</string>
     <string name="tools_apps_restart_tip_body">After saving app rules, restart the service for changes to take effect.</string>
@@ -664,6 +726,16 @@
     <string name="bottomsheet_subscription_none">No subscriptions</string>
     <string name="bottomsheet_subscription_expires">Expires: %1$s</string>
     <string name="bottomsheet_subscription_updated">Updated %1$s</string>
+    <string name="bottomsheet_subscription_expiry_unknown">Unknown expiry</string>
+    <string name="bottomsheet_subscription_expiry_expired">Expired %1$d days ago</string>
+    <string name="bottomsheet_subscription_expiry_today">Expires today</string>
+    <string name="bottomsheet_subscription_expiry_days">%1$d days left</string>
+    <string name="bottomsheet_subscription_expiry_days_date">%1$d days left (%2$s)</string>
+    <string name="bottomsheet_subscription_update_never">Never updated</string>
+    <string name="bottomsheet_subscription_update_just_now">Just updated</string>
+    <string name="bottomsheet_subscription_update_minutes">%1$d min ago</string>
+    <string name="bottomsheet_subscription_update_today">Today %1$s</string>
+    <string name="bottomsheet_subscription_update_yesterday">Yesterday %1$s</string>
     <string name="common_yesterday_time">Yday %1$s</string>
     <string name="bottomsheet_subscription_upload">Upload</string>
     <string name="bottomsheet_subscription_download">Download</string>
@@ -732,4 +804,92 @@
 
     <string name="bottomsheet_release_type_prerelease">Prerelease</string>
     <string name="bottomsheet_release_type_stable">Stable</string>
+
+    <!-- Monitor Daemon Settings -->
+    <string name="monitor_title">Monitor &amp; Daemon</string>
+    <string name="monitor_subtitle">Watchdog, scheduled restart &amp; logging</string>
+    <string name="monitor_section_network_watchdog">Network Watchdog</string>
+    <string name="monitor_network_watchdog_enable">Network watchdog</string>
+    <string name="monitor_network_watchdog_enable_subtitle">Monitor connectivity and restart on failure</string>
+    <string name="monitor_network_check_interval">Check interval (seconds)</string>
+    <string name="monitor_network_check_interval_subtitle">Minimum 10 seconds</string>
+    <string name="monitor_network_watchdog_timeout">Failure threshold</string>
+    <string name="monitor_network_watchdog_timeout_subtitle">Consecutive failures before restart</string>
+    <string name="monitor_network_test_host">Test target URL</string>
+    <string name="monitor_network_test_host_subtitle">HTTP endpoint for connectivity check</string>
+    <string name="monitor_section_cpu_watchdog">CPU Watchdog</string>
+    <string name="monitor_cpu_watchdog_enable">CPU watchdog</string>
+    <string name="monitor_cpu_watchdog_enable_subtitle">Restart core when CPU exceeds threshold</string>
+    <string name="monitor_cpu_watchdog_threshold">CPU threshold (%)</string>
+    <string name="monitor_cpu_watchdog_threshold_subtitle">Percentage of CPU usage</string>
+    <string name="monitor_cpu_watchdog_duration">Duration (seconds)</string>
+    <string name="monitor_cpu_watchdog_duration_subtitle">Sustained duration before restart</string>
+    <string name="monitor_section_scheduled_restart">Scheduled Restart</string>
+    <string name="monitor_scheduled_restart_enable">Scheduled restart</string>
+    <string name="monitor_scheduled_restart_enable_subtitle">Restart core on a cron schedule</string>
+    <string name="monitor_scheduled_restart_cron">Cron expression</string>
+    <string name="monitor_scheduled_restart_cron_subtitle">e.g. 0 3 * * * (daily at 3 AM)</string>
+    <string name="monitor_section_logging">Logging &amp; Cleanup</string>
+    <string name="monitor_log_level">Log output filter</string>
+    <string name="monitor_log_level_all">All</string>
+    <string name="monitor_log_level_warning">Warning</string>
+    <string name="monitor_log_level_error">Error</string>
+    <string name="monitor_log_level_none">None</string>
+    <string name="monitor_clear_restart_log">Clear restart log</string>
+    <string name="monitor_clear_restart_log_subtitle">Clear log file on each restart</string>
+    <string name="monitor_clean_gfw_rules">Clean GFW rules</string>
+    <string name="monitor_clean_gfw_rules_subtitle">Remove injected firewall REJECT rules on startup</string>
+    <string name="monitor_cron_daily_3am">Daily at 3 AM</string>
+    <string name="monitor_cron_daily_4am">Daily at 4 AM</string>
+    <string name="monitor_cron_every_6h">Every 6 hours</string>
+    <string name="monitor_cron_every_12h">Every 12 hours</string>
+    <string name="monitor_cron_weekly_mon">Weekly on Monday 3 AM</string>
+    <string name="monitor_cron_custom">Custom</string>
+    <string name="monitor_section_download">Download Settings</string>
+    <string name="monitor_github_token">GitHub access token</string>
+    <string name="monitor_github_token_subtitle">Personal access token for GitHub API</string>
+
+    <!-- SmartDNS -->
+    <string name="smartdns_entry_subtitle">DNS service management &amp; WebUI</string>
+    <string name="smartdns_not_installed">SmartDNS module not installed</string>
+    <string name="smartdns_section_status">Service Status</string>
+    <string name="smartdns_status_running">Running</string>
+    <string name="smartdns_status_stopped">Stopped</string>
+    <string name="smartdns_action_start">Start</string>
+    <string name="smartdns_action_stop">Stop</string>
+    <string name="smartdns_action_restart">Restart</string>
+    <string name="smartdns_webui_open">Open WebUI</string>
+    <string name="smartdns_webui_user">Username</string>
+    <string name="smartdns_webui_password">Password</string>
+    <string name="smartdns_section_config">Configuration</string>
+    <string name="smartdns_config_dns">DNS Configuration</string>
+    <string name="smartdns_config_module">Module Settings</string>
+    <string name="smartdns_section_settings">Module Settings</string>
+    <string name="smartdns_auto_run">Auto start</string>
+    <string name="smartdns_auto_run_subtitle">Start SmartDNS on boot</string>
+    <string name="smartdns_oom_protect">OOM protection</string>
+    <string name="smartdns_oom_protect_subtitle">Prevent system from killing SmartDNS</string>
+    <string name="smartdns_rule_auto_update">Auto update rules</string>
+    <string name="smartdns_rule_auto_update_subtitle">Daily at %1$s</string>
+    <string name="smartdns_update_rules_now">Update rules now</string>
+    <string name="smartdns_update_rules_now_subtitle">Download and apply latest rules</string>
+    <string name="smartdns_section_logs">Recent Logs</string>
+    <string name="smartdns_no_logs">No log content</string>
+    <string name="smartdns_home_subtitle_running">Running</string>
+    <string name="smartdns_home_subtitle_stopped">Stopped</string>
+
+    <!-- SmartDNS Config Editor -->
+    <string name="sdns_config_tab_visual">Visual</string>
+    <string name="sdns_config_tab_code">Code</string>
+    <string name="sdns_section_bind">Bind</string>
+    <string name="sdns_section_log">Logging</string>
+    <string name="sdns_section_cache">Cache</string>
+    <string name="sdns_section_prefetch">Prefetch &amp; Expired Cache</string>
+    <string name="sdns_section_speed">Speed Check</string>
+    <string name="sdns_section_servers">DNS Servers</string>
+    <string name="sdns_force_aaaa_soa_desc">Disable IPv6 AAAA records</string>
+    <string name="sdns_no_servers">No server entries</string>
+    <string name="sdns_servers_edit_hint">Switch to Code mode to edit servers</string>
+    <string name="sdns_setting_section_startup">Startup &amp; Performance</string>
+    <string name="sdns_setting_section_rules">Rule Auto-Update</string>
 </resources>

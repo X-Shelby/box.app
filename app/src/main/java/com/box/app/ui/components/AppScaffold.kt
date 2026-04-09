@@ -7,13 +7,23 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.saveable.listSaver
+import androidx.navigation3.runtime.NavEntry
+import androidx.navigation3.runtime.NavKey
+import androidx.navigation3.ui.NavDisplay
+import dev.lackluster.hyperx.ui.animation.HyperXNavTransitions
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
@@ -22,7 +32,6 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -58,12 +67,21 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.graphics.Color
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.basic.NavigationBar as MiuixNavigationBar
+import top.yukonga.miuix.kmp.basic.NavigationBarItem as MiuixNavigationBarItem
 import com.box.app.ui.screens.HomeScreen
 import com.box.app.ui.screens.ToolsScreen
 import com.box.app.ui.screens.SettingsScreen
 import com.box.app.ui.screens.PanelScreen
+import com.box.app.ui.screens.SmartDnsWebUiScreen
 import com.box.app.ui.screens.SubStoreScreen
 import com.box.app.ui.screens.tools.ToolsLogsScreen
 import com.box.app.ui.screens.tools.ToolsUpdateSubscriptionScreen
@@ -71,14 +89,24 @@ import com.box.app.ui.screens.OnboardingScreen
 import com.box.app.R
 import com.box.app.ui.components.LocalLiquidBackdrop
 import com.box.app.ui.components.bottomsheets.LocalSheetBackdrop
+import com.box.app.ui.components.bottomsheets.LocalSheetBlurState
+import com.box.app.ui.components.bottomsheets.SheetBlurState
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 
 import com.box.app.ui.components.LocalFloatingNavBarSpaceDp
 import com.box.app.ui.components.LocalNavigationBarsPaddingEnabled
 import com.box.app.ui.components.LocalSystemNavBarInsetDp
+import com.box.app.ui.effect.androidRenderBlur
+import com.box.app.ui.effect.navigationCancelSpec
+import com.box.app.ui.effect.navigationPredictiveBackProgress
+import com.box.app.ui.effect.navigationPopSpec
+import com.box.app.ui.effect.navigationPushSpec
+import com.box.app.ui.effect.navigationSceneProgress
+import com.box.app.ui.effect.supportsAndroidRenderBlur
 import com.box.app.utils.SystemBarMode
 import com.box.app.utils.ThemeManager
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 enum class MainTab(val labelResId: Int) {
     Home(R.string.main_tab_home),
@@ -120,7 +148,7 @@ class MainPagerState(
         selectedPage = boundedTarget
         isNavigating = true
         val distance = abs(boundedTarget - pagerState.currentPage).coerceAtLeast(1)
-        val duration = 120 * distance + 120
+        val duration = 160 * distance + 180
 
         navJob = coroutineScope.launch {
             try {
@@ -129,7 +157,7 @@ class MainPagerState(
                     pageOffsetFraction = 0f,
                     animationSpec = tween(
                         durationMillis = duration,
-                        easing = EaseInOut
+                        easing = FastOutSlowInEasing
                     )
                 )
                 if (pagerState.currentPage != boundedTarget) {
@@ -175,12 +203,15 @@ fun rememberMainPagerState(
     }
 }
 
-enum class AppScreen {
+enum class AppScreen : NavKey {
     Main,
     Panel,
     SubStore,
+    SmartDnsWebUi,
     ToolsLogs,
-    ToolsUpdateSubscription
+    ToolsUpdateSubscription,
+    NetSpeed,
+    SubscriptionDetail
 }
 
 fun MainTab.index(): Int = when (this) {
@@ -232,6 +263,10 @@ fun AppScaffold() {
 
     val uiBackdrop = key(backdropVersion) { rememberLayerBackdrop() }
     val contentBackdrop = key(backdropVersion) { rememberLayerBackdrop() }
+    val navBlurSupported = remember { supportsAndroidRenderBlur() }
+    val isDarkTheme = ThemeManager.shouldUseDarkTheme()
+    val useHyperXNav by ThemeManager.hyperXNavTransitions.collectAsState()
+    val sheetBlurState = remember { SheetBlurState() }
 
     var appScreenContainerWidthPx by remember { mutableFloatStateOf(0f) }
     val transition = remember(openPanelOnLaunch) { Animatable(if (openPanelOnLaunch) 1f else 0f) }
@@ -239,10 +274,14 @@ fun AppScaffold() {
         mutableStateOf<AppScreen?>(if (openPanelOnLaunch) AppScreen.Panel else null)
     }
 
+    var smartDnsWebCanGoBack by remember { mutableStateOf(false) }
+    var smartDnsBackRequestKey by remember { mutableIntStateOf(0) }
+
     fun exitSubpage() {
         currentScreen = AppScreen.Main
         panelWebCanGoBack = false
         subStoreWebCanGoBack = false
+        smartDnsWebCanGoBack = false
     }
 
     fun openSubpage(screen: AppScreen) {
@@ -257,6 +296,10 @@ fun AppScaffold() {
                 subStoreWebCanGoBack = false
                 subStoreBackRequestKey = 0
             }
+            if (screen == AppScreen.SmartDnsWebUi) {
+                smartDnsWebCanGoBack = false
+                smartDnsBackRequestKey = 0
+            }
             currentScreen = screen
         }
     }
@@ -266,9 +309,9 @@ fun AppScaffold() {
         if (transition.targetValue == target && transition.value == target) return@LaunchedEffect
         if (currentScreen != AppScreen.Main) {
             lastNonMainScreen = currentScreen
-            transition.animateTo(1f, animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing))
+            transition.animateTo(1f, animationSpec = navigationPushSpec())
         } else {
-            transition.animateTo(0f, animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing))
+            transition.animateTo(0f, animationSpec = navigationPopSpec())
             transition.snapTo(0f)
         }
     }
@@ -402,27 +445,51 @@ fun AppScaffold() {
             CompositionLocalProvider(
                 LocalLiquidBackdrop provides uiBackdrop,
                 LocalSheetBackdrop provides contentBackdrop,
+                LocalSheetBlurState provides sheetBlurState,
                 LocalNavigationBarsPaddingEnabled provides (systemBarSettings.navigationBar == SystemBarMode.TRANSPARENT)
             ) {
                 val w = appScreenContainerWidthPx
                 val t = transition.value
-                val mainX = if (w > 0f) (-w / 3f) * t else 0f
+                val easedT = navigationSceneProgress(t)
+                val mainOffsetX = if (w > 0f) (-w * 0.18f) * easedT else 0f
+                val mainScale = 1f - 0.05f * easedT
+
+                // BottomSheet 模糊半径（spring 物理动画，更丝滑）
+                val sheetBlurActive = sheetBlurState.isActive && navBlurSupported
+                val sheetBlurRadius by animateFloatAsState(
+                    targetValue = if (sheetBlurActive) 20f else 0f,
+                    animationSpec = spring(dampingRatio = 0.85f, stiffness = 200f),
+                    label = "sheet_blur"
+                )
+
+                // 导航 + Sheet 模糊叠加：取较大值
+                val navBlurRadius = (40f * easedT).coerceAtMost(40f)
+                val combinedBlurRadius = maxOf(navBlurRadius, sheetBlurRadius)
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .graphicsLayer { translationX = mainX }
+                        .graphicsLayer {
+                            translationX = mainOffsetX
+                            scaleX = mainScale
+                            scaleY = mainScale
+                        }
+                        .androidRenderBlur(
+                            radius = combinedBlurRadius,
+                            enabled = navBlurSupported && combinedBlurRadius > 0.1f
+                        )
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background)
+                            
                             .layerBackdrop(uiBackdrop)
                     )
 
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.background)
+                            
                             .layerBackdrop(contentBackdrop)
                     ) {
                         CompositionLocalProvider(
@@ -442,7 +509,10 @@ fun AppScaffold() {
                                                 onOpenLogs = { openSubpage(AppScreen.ToolsLogs) },
                                                 onOpenUpdateSubscription = { openSubpage(AppScreen.ToolsUpdateSubscription) },
                                                 onOpenPanel = { openSubpage(AppScreen.Panel) },
-                                                onOpenSubStore = { openSubpage(AppScreen.SubStore) }
+                                                onOpenSubStore = { openSubpage(AppScreen.SubStore) },
+                                                onOpenNetSpeed = { openSubpage(AppScreen.NetSpeed) },
+                                                onOpenSmartDns = { openSubpage(AppScreen.SmartDnsWebUi) },
+                                                onOpenSubscriptionDetail = { openSubpage(AppScreen.SubscriptionDetail) }
                                             )
                                         }
                                     }
@@ -484,7 +554,8 @@ fun AppScaffold() {
                                                     openToolsUpdateSubscriptionRequest = 0
                                                     resetToolsToRootRequest += 1
                                                     mainPagerState.animateToPage(MainTab.Home.index())
-                                                }
+                                                },
+                                                onOpenSmartDnsWebUi = { openSubpage(AppScreen.SmartDnsWebUi) }
                                             )
                                         }
                                     }
@@ -511,8 +582,90 @@ fun AppScaffold() {
                         }
                     }
                 }
+
             }
 
+            // ── HyperX NavDisplay 导航 ──
+            if (useHyperXNav) {
+                val hyperXBackStack = rememberSaveable(
+                    saver = listSaver<MutableList<AppScreen>, AppScreen>(
+                        save = { it.toList() },
+                        restore = { it.toMutableStateList() }
+                    )
+                ) { mutableStateListOf(AppScreen.Main) }
+
+                // 同步 currentScreen → backStack
+                LaunchedEffect(currentScreen) {
+                    if (currentScreen == AppScreen.Main) {
+                        while (hyperXBackStack.size > 1) hyperXBackStack.removeLastOrNull()
+                    } else if (hyperXBackStack.lastOrNull() != currentScreen) {
+                        hyperXBackStack.add(currentScreen)
+                    }
+                }
+
+                val layoutDirection = androidx.compose.ui.platform.LocalLayoutDirection.current
+
+                NavDisplay(
+                    backStack = hyperXBackStack,
+                    onBack = {
+                        if (hyperXBackStack.size > 1) {
+                            hyperXBackStack.removeLastOrNull()
+                            exitSubpage()
+                        }
+                    },
+                    transitionSpec = HyperXNavTransitions.normalTransitionSpec(layoutDirection),
+                    popTransitionSpec = HyperXNavTransitions.normalPopTransitionSpec(layoutDirection),
+                    predictivePopTransitionSpec = HyperXNavTransitions.normalPredictivePopTransitionSpec(layoutDirection),
+                    transitionEffects = HyperXNavTransitions.NormalTransitionEffects,
+                    entryProvider = { key ->
+                        @Suppress("UNCHECKED_CAST")
+                        val screen = key as? AppScreen ?: AppScreen.Main
+                        NavEntry(key) {
+                            if (screen == AppScreen.Main) return@NavEntry
+                            val subpageSystemNavInsetDp = if (
+                                systemBarSettings.navigationBar == SystemBarMode.TRANSPARENT &&
+                                screen != AppScreen.Panel &&
+                                screen != AppScreen.SubStore &&
+                                screen != AppScreen.SmartDnsWebUi
+                            ) systemNavInsetDp else 0.dp
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(MiuixTheme.colorScheme.surface)
+                            ) {
+                                CompositionLocalProvider(
+                                    LocalFloatingNavBarSpaceDp provides 0.dp,
+                                    LocalSystemNavBarInsetDp provides subpageSystemNavInsetDp
+                                ) {
+                                    SubpageContent(
+                                        screen = screen,
+                                        onBack = { exitSubpage(); if (hyperXBackStack.size > 1) hyperXBackStack.removeLastOrNull() },
+                                        panelBackRequestKey = panelBackRequestKey,
+                                        onPanelCanGoBackChange = { panelWebCanGoBack = it },
+                                        subStoreBackRequestKey = subStoreBackRequestKey,
+                                        onSubStoreCanGoBackChange = { subStoreWebCanGoBack = it },
+                                        smartDnsBackRequestKey = smartDnsBackRequestKey,
+                                        onSmartDnsCanGoBackChange = { smartDnsWebCanGoBack = it },
+                                        onNavVisibilityChange = { navVisible = it },
+                                        onOpenToolsSubscription = {
+                                            exitSubpage()
+                                            if (hyperXBackStack.size > 1) hyperXBackStack.removeLastOrNull()
+                                            scope.launch {
+                                                kotlinx.coroutines.delay(100)
+                                                openSubpage(AppScreen.ToolsUpdateSubscription)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+
+            // ── 默认 Animatable 导航（HyperX 关闭时） ──
+            if (!useHyperXNav) {
             val activeSubpage = when {
                 currentScreen != AppScreen.Main -> currentScreen
                 transition.value > 0f -> lastNonMainScreen
@@ -522,12 +675,14 @@ fun AppScaffold() {
             if (activeSubpage != null && (transition.value > 0f || currentScreen != AppScreen.Main)) {
                 val w = appScreenContainerWidthPx
                 val t = transition.value
-                val subX = if (w > 0f) w * (1f - t) else 0f
+                val easedT = navigationSceneProgress(t)
+                val subX = if (w > 0f) w * (1f - easedT) else 0f
 
                 val subpageSystemNavInsetDp = if (
                     systemBarSettings.navigationBar == SystemBarMode.TRANSPARENT &&
                     activeSubpage != AppScreen.Panel &&
-                    activeSubpage != AppScreen.SubStore
+                    activeSubpage != AppScreen.SubStore &&
+                    activeSubpage != AppScreen.SmartDnsWebUi
                 ) {
                     systemNavInsetDp
                 } else {
@@ -537,12 +692,14 @@ fun AppScaffold() {
                 if (currentScreen != AppScreen.Main) {
                     val shouldHandleWebBack =
                         (currentScreen == AppScreen.Panel && panelWebCanGoBack) ||
-                            (currentScreen == AppScreen.SubStore && subStoreWebCanGoBack)
+                            (currentScreen == AppScreen.SubStore && subStoreWebCanGoBack) ||
+                            (currentScreen == AppScreen.SmartDnsWebUi && smartDnsWebCanGoBack)
 
                     BackHandler {
                         when {
                             currentScreen == AppScreen.Panel && panelWebCanGoBack -> panelBackRequestKey += 1
                             currentScreen == AppScreen.SubStore && subStoreWebCanGoBack -> subStoreBackRequestKey += 1
+                            currentScreen == AppScreen.SmartDnsWebUi && smartDnsWebCanGoBack -> smartDnsBackRequestKey += 1
                             else -> exitSubpage()
                         }
                     }
@@ -553,6 +710,7 @@ fun AppScaffold() {
                             when {
                                 currentScreen == AppScreen.Panel && panelWebCanGoBack -> panelBackRequestKey += 1
                                 currentScreen == AppScreen.SubStore && subStoreWebCanGoBack -> subStoreBackRequestKey += 1
+                                currentScreen == AppScreen.SmartDnsWebUi && smartDnsWebCanGoBack -> smartDnsBackRequestKey += 1
                             }
                         } catch (e: kotlinx.coroutines.CancellationException) {
                             throw e
@@ -562,26 +720,43 @@ fun AppScaffold() {
                     PredictiveBackHandler(enabled = w > 0f && !shouldHandleWebBack) { progress ->
                         try {
                             progress.collect { backEvent ->
-                                transition.snapTo((1f - backEvent.progress).coerceIn(0f, 1f))
+                                transition.snapTo(navigationPredictiveBackProgress(backEvent.progress))
                             }
                             exitSubpage()
                         } catch (e: kotlinx.coroutines.CancellationException) {
                             scope.launch {
-                                transition.animateTo(1f, animationSpec = tween(durationMillis = 220, easing = FastOutSlowInEasing))
+                                transition.animateTo(1f, animationSpec = navigationCancelSpec())
                             }
                             throw e
                         }
                     }
                 }
 
+                // 模糊遮罩（使用 easedT 实现丝滑渐变）
+                if (navBlurSupported && t > 0.02f) {
+                    val dimColor = if (isDarkTheme) Color.Black.copy(alpha = 0.35f * easedT)
+                        else Color(0xFF606060).copy(alpha = 0.12f * easedT)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(dimColor)
+                    )
+                } else if (t > 0.01f) {
+                    val fallbackAlpha = if (isDarkTheme) 0.35f * easedT else 0.18f * easedT
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { alpha = fallbackAlpha }
+                            .background(if (isDarkTheme) Color.Black else Color.Gray)
+                    )
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .graphicsLayer {
-                            translationX = subX
-                            alpha = t
-                        }
-                        .background(MaterialTheme.colorScheme.background)
+                        .graphicsLayer { translationX = subX }
+                        .background(MiuixTheme.colorScheme.surface)
+                        
                 ) {
                     CompositionLocalProvider(
                         LocalFloatingNavBarSpaceDp provides 0.dp,
@@ -598,6 +773,11 @@ fun AppScaffold() {
                                 backRequestKey = subStoreBackRequestKey,
                                 onCanGoBackChange = { subStoreWebCanGoBack = it }
                             )
+                            AppScreen.SmartDnsWebUi -> SmartDnsWebUiScreen(
+                                onNavigateBack = { exitSubpage() },
+                                backRequestKey = smartDnsBackRequestKey,
+                                onCanGoBackChange = { smartDnsWebCanGoBack = it }
+                            )
                             AppScreen.ToolsLogs -> ToolsLogsScreen(
                                 onNavVisibilityChange = { navVisible = it },
                                 onBack = { exitSubpage() }
@@ -606,12 +786,26 @@ fun AppScaffold() {
                                 onNavVisibilityChange = { navVisible = it },
                                 onBack = { exitSubpage() }
                             )
+                            AppScreen.NetSpeed -> com.box.app.ui.screens.tools.NetSpeedScreen(
+                                onBack = { exitSubpage() }
+                            )
+                            AppScreen.SubscriptionDetail -> com.box.app.ui.screens.SubscriptionDetailScreen(
+                                onBack = { exitSubpage() },
+                                onOpenToolsSubscription = {
+                                    exitSubpage()
+                                    scope.launch {
+                                        kotlinx.coroutines.delay(100)
+                                        openSubpage(AppScreen.ToolsUpdateSubscription)
+                                    }
+                                }
+                            )
                             else -> Unit
                         }
                     }
                 }
             }
         }
+        } // if (!useHyperXNav)
 
         val navBarsInsetPx = WindowInsets.navigationBars.getBottom(density).toFloat()
         val extraHidePx = with(density) { 24.dp.toPx() }
@@ -622,19 +816,121 @@ fun AppScaffold() {
 
         val navOffsetYPx by animateFloatAsState(
             targetValue = if (navVisible && currentScreen == AppScreen.Main && mainTabAtRoot) 0f else navHiddenOffsetPx,
-            animationSpec = tween(durationMillis = 220),
+            animationSpec = tween(durationMillis = 380, easing = FastOutSlowInEasing),
             label = "nav_offset_y"
         )
 
-        FloatingPillNavBar(
-            mainPagerState = mainPagerState,
-            backdrop = contentBackdrop,
+        // 底栏：液态玻璃 vs 标准
+        val useLiquidGlassNav by ThemeManager.liquidGlassNavBar.collectAsState()
+
+        androidx.compose.animation.AnimatedContent(
+            targetState = useLiquidGlassNav,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = systemNavInsetDp)
-                .padding(horizontal = 20.dp, vertical = 14.dp)
                 .onSizeChanged { navBarMeasuredHeightPx = it.height }
-                .graphicsLayer { translationY = navOffsetYPx }
+                .graphicsLayer { translationY = navOffsetYPx },
+            transitionSpec = {
+                (androidx.compose.animation.fadeIn(
+                    animationSpec = tween(420, easing = FastOutSlowInEasing)
+                ) + androidx.compose.animation.scaleIn(
+                    initialScale = 0.94f,
+                    animationSpec = tween(420, easing = FastOutSlowInEasing)
+                )).togetherWith(
+                    androidx.compose.animation.fadeOut(
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    ) + androidx.compose.animation.scaleOut(
+                        targetScale = 0.94f,
+                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+                    )
+                ).using(
+                    androidx.compose.animation.SizeTransform(clip = false)
+                )
+            },
+            label = "nav_bar_switch"
+        ) { liquidGlass ->
+            if (liquidGlass) {
+                FloatingPillNavBar(
+                    mainPagerState = mainPagerState,
+                    backdrop = contentBackdrop,
+                    modifier = Modifier
+                        .padding(bottom = systemNavInsetDp)
+                        .padding(horizontal = 20.dp, vertical = 14.dp)
+                )
+            } else {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    MiuixNavigationBar(
+                        defaultWindowInsetsPadding = true
+                    ) {
+                        MiuixNavigationBarItem(
+                            selected = mainPagerState.selectedPage == 0,
+                            onClick = { mainPagerState.animateToPage(0) },
+                            icon = Icons.Filled.Home,
+                            label = context.getString(R.string.main_tab_home)
+                        )
+                        MiuixNavigationBarItem(
+                            selected = mainPagerState.selectedPage == 1,
+                            onClick = { mainPagerState.animateToPage(1) },
+                            icon = Icons.Filled.Build,
+                            label = context.getString(R.string.main_tab_tools)
+                        )
+                        MiuixNavigationBarItem(
+                            selected = mainPagerState.selectedPage == 2,
+                            onClick = { mainPagerState.animateToPage(2) },
+                            icon = Icons.Filled.Settings,
+                            label = context.getString(R.string.main_tab_settings)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 子页面内容渲染（NavDisplay 和 Animatable 两种路径共用） */
+@Composable
+private fun SubpageContent(
+    screen: AppScreen,
+    onBack: () -> Unit,
+    panelBackRequestKey: Int,
+    onPanelCanGoBackChange: (Boolean) -> Unit,
+    subStoreBackRequestKey: Int,
+    onSubStoreCanGoBackChange: (Boolean) -> Unit,
+    smartDnsBackRequestKey: Int,
+    onSmartDnsCanGoBackChange: (Boolean) -> Unit,
+    onNavVisibilityChange: (Boolean) -> Unit,
+    onOpenToolsSubscription: () -> Unit
+) {
+    when (screen) {
+        AppScreen.Panel -> PanelScreen(
+            onNavigateBack = onBack,
+            backRequestKey = panelBackRequestKey,
+            onCanGoBackChange = onPanelCanGoBackChange
         )
+        AppScreen.SubStore -> SubStoreScreen(
+            onNavigateBack = onBack,
+            backRequestKey = subStoreBackRequestKey,
+            onCanGoBackChange = onSubStoreCanGoBackChange
+        )
+        AppScreen.SmartDnsWebUi -> SmartDnsWebUiScreen(
+            onNavigateBack = onBack,
+            backRequestKey = smartDnsBackRequestKey,
+            onCanGoBackChange = onSmartDnsCanGoBackChange
+        )
+        AppScreen.ToolsLogs -> ToolsLogsScreen(
+            onNavVisibilityChange = onNavVisibilityChange,
+            onBack = onBack
+        )
+        AppScreen.ToolsUpdateSubscription -> ToolsUpdateSubscriptionScreen(
+            onNavVisibilityChange = onNavVisibilityChange,
+            onBack = onBack
+        )
+        AppScreen.NetSpeed -> com.box.app.ui.screens.tools.NetSpeedScreen(
+            onBack = onBack
+        )
+        AppScreen.SubscriptionDetail -> com.box.app.ui.screens.SubscriptionDetailScreen(
+            onBack = onBack,
+            onOpenToolsSubscription = onOpenToolsSubscription
+        )
+        else -> Unit
     }
 }

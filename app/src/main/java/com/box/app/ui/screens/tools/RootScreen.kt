@@ -1,47 +1,37 @@
 package com.box.app.ui.screens.tools
 
 import android.content.Context
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Apps
-import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Router
 import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material.icons.automirrored.filled.Article
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,28 +42,50 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.launch
-import com.box.app.data.backend.BoxApi
-import com.box.app.R
-import com.box.app.ui.components.ErrorToast
-import com.box.app.data.repo.HomeRepository
-import com.box.app.ui.components.ToolsRowIcon
-import com.box.app.ui.components.ToolsSectionCard
-import com.box.app.ui.components.contentPaddingWithNavBars
-import com.box.app.ui.components.bottomsheets.AppModalBottomSheet
-import com.box.app.ui.theme.appColors
-import com.box.app.ui.theme.appAccentColor
 import com.box.app.BuildConfig
-import com.kyant.shapes.Capsule
-import com.kyant.shapes.RoundedRectangle
+import com.box.app.R
+import com.box.app.data.backend.BoxApi
+import com.box.app.data.repo.HomeRepository
+import com.box.app.ui.components.ErrorToast
+import com.box.app.ui.components.contentPaddingWithNavBars
+import com.box.app.ui.miuix.HyperBottomSheet
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.BasicComponent
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.ButtonDefaults
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Text
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import coil3.compose.AsyncImage
+import com.box.app.data.backend.ShellExecutor
+import com.box.app.utils.ThemeManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.shapes.SmoothRoundedCornerShape
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+
 @Composable
 fun ToolsRootScreen(
     onNavVisibilityChange: (Boolean) -> Unit,
@@ -84,120 +96,81 @@ fun ToolsRootScreen(
     onOpenNetworkControl: () -> Unit,
     onOpenLogs: () -> Unit,
     onOpenUpdateSubscription: () -> Unit,
-    onOpenUpdateCnip: () -> Unit
+    onOpenUpdateCnip: () -> Unit,
+    onOpenMonitorSettings: () -> Unit,
+    onOpenSmartDns: () -> Unit
 ) {
-    val c = appColors()
-    val accent = appAccentColor()
-    val pagePadding = 16.dp
-
     val context = LocalContext.current
     val updatePrefs = remember { context.getSharedPreferences("tools_update", Context.MODE_PRIVATE) }
     val persistedCore = remember { updatePrefs.getString("selected_update_core", "mihomo") ?: "mihomo" }
-
     val scope = rememberCoroutineScope()
+
     var toastMessage by remember { mutableStateOf<String?>(null) }
+    var showUpdateCoreSheet by remember { mutableStateOf(false) }
+    var selectedCores by remember { mutableStateOf(setOf(persistedCore)) }
+    var coreVersions by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var updateStatuses by remember { mutableStateOf<Map<String, CoreUpdateStatus>>(emptyMap()) }
+    var isUpdating by remember { mutableStateOf(false) }
 
     ErrorToast(
         message = toastMessage,
         onConsumed = { toastMessage = null }
     )
 
-    fun mapKernelNameForUpdate(name: String): String {
-        return if (name == "v2ray") "v2fly" else name
+    fun mapKernelNameForUpdate(name: String): String = when (name) {
+        "v2ray" -> "v2fly"
+        else -> name
     }
 
-    val updateTargetCoreLabel = stringResource(R.string.tools_update_target_core)
-    val updateTargetSubscriptionLabel = stringResource(R.string.tools_update_target_subscription)
-    val updateTargetWebuiLabel = stringResource(R.string.tools_update_target_webui)
+    /** 并发更新所有已选核心，逐个回报状态 */
+    fun updateSelectedCores() {
+        if (isUpdating || selectedCores.isEmpty()) return
+        isUpdating = true
+        updateStatuses = selectedCores.associateWith { CoreUpdateStatus.Updating }
 
-    var showUpdateCoreSheet by remember { mutableStateOf(false) }
-    var selectedUpdateCore by rememberSaveable { mutableStateOf(persistedCore) }
-
-    LaunchedEffect(selectedUpdateCore) {
-        updatePrefs.edit().putString("selected_update_core", selectedUpdateCore).apply()
-    }
-
-    if (showUpdateCoreSheet) {
-        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-        val coreOptions = listOf(
-            Triple("mihomo", stringResource(R.string.tools_update_core_mihomo_subtitle), true),
-            Triple("mihomo_smart", stringResource(R.string.tools_update_core_mihomo_smart_subtitle), true),
-            Triple("sing-box", stringResource(R.string.tools_update_core_sing_box_subtitle), true),
-            Triple("xray", stringResource(R.string.tools_update_core_xray_subtitle), true),
-            Triple("v2ray", stringResource(R.string.tools_update_core_v2ray_subtitle), true),
-            Triple("hysteria", stringResource(R.string.tools_update_core_hysteria_subtitle), true)
-        )
-
-        AppModalBottomSheet(
-            onDismissRequest = { showUpdateCoreSheet = false },
-            sheetState = sheetState
-        ) {
-            val sheetScrollState = rememberScrollState()
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 10.dp, bottom = 6.dp),
-                    contentAlignment = androidx.compose.ui.Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(width = 28.dp, height = 3.dp)
-                            .background(c.divider.copy(alpha = 0.42f), shape = Capsule())
-                    )
+        scope.launch {
+            val jobs = selectedCores.map { key ->
+                launch(Dispatchers.IO) {
+                    val kernel = mapKernelNameForUpdate(key)
+                    val success = runCatching { BoxApi.updateKernel(kernel) }.getOrDefault(false)
+                    withContext(Dispatchers.Main) {
+                        updateStatuses = updateStatuses + (key to
+                                if (success) CoreUpdateStatus.Success else CoreUpdateStatus.Failed)
+                    }
                 }
+            }
+            jobs.joinAll()
+            isUpdating = false
 
-                Column(
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp)
-                        .verticalScroll(sheetScrollState)
-                ) {
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = stringResource(R.string.tools_update_sheet_title),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = c.textPrimary
-                            )
-                            Text(
-                                text = stringResource(R.string.tools_update_sheet_subtitle),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = c.textSecondary
-                            )
+            val sc = updateStatuses.count { it.value == CoreUpdateStatus.Success }
+            val fc = updateStatuses.count { it.value == CoreUpdateStatus.Failed }
+            toastMessage = if (fc == 0) {
+                context.getString(R.string.tools_update_completed, "$sc")
+            } else {
+                "${context.getString(R.string.tools_update_failed)}: $sc/${sc + fc}"
+            }
+        }
+    }
+
+    // 打开底部工作表时异步检测各核心版本
+    LaunchedEffect(showUpdateCoreSheet) {
+        if (showUpdateCoreSheet) {
+            coreVersions = emptyMap()
+            withContext(Dispatchers.IO) {
+                val versions = mutableMapOf<String, String>()
+                val bins = CORE_OPTIONS.map { it.binName }.distinct()
+                for (bin in bins) {
+                    runCatching {
+                        // 同时执行 -v 和 version，合并输出由 Kotlin 解析器提取版本号
+                        val cmd = """for p in "/data/adb/box/bin/$bin" "/data/adb/box/$bin/$bin"; do [ -x "${'$'}p" ] || continue; v=${'$'}( { "${'$'}p" -v 2>/dev/null; "${'$'}p" version 2>/dev/null; } | head -n20 ); [ -n "${'$'}v" ] && echo "${'$'}v" && exit 0; done"""
+                        val res = ShellExecutor.execute(cmd)
+                        val ver = res.stdout.trim()
+                        if (ver.isNotBlank()) {
+                            versions[bin] = parseCleanVersion(ver) ?: ver
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    coreOptions.forEachIndexed { idx, (name, subtitle, _) ->
-                        val isLast = idx == coreOptions.lastIndex
-                        UpdateCoreOptionRow(
-                            title = name,
-                            subtitle = subtitle,
-                            selected = selectedUpdateCore == name,
-                            showDivider = !isLast,
-                            onRowClick = { selectedUpdateCore = name },
-                            onUpdate = {
-                                val kernel = mapKernelNameForUpdate(name)
-                                scope.launch {
-                                    toastMessage = context.getString(R.string.tools_update_started, updateTargetCoreLabel)
-                                    val success = BoxApi.updateKernel(kernel)
-                                    toastMessage = if (success) {
-                                        context.getString(R.string.tools_update_completed, kernel)
-                                    } else {
-                                        context.getString(R.string.tools_update_failed)
-                                    }
-                                }
-                            }
-                        )
-                    }
                 }
-                
-                // Add navigation bar padding at the bottom
-                Spacer(modifier = Modifier.windowInsetsPadding(WindowInsets.navigationBars))
+                coreVersions = versions
             }
         }
     }
@@ -211,396 +184,484 @@ fun ToolsRootScreen(
         snapshotFlow { listState.firstVisibleItemIndex * 10_000 + listState.firstVisibleItemScrollOffset }
             .distinctUntilChanged()
             .collect { now ->
-                if (now > last) {
-                    onNavVisibilityChange(false)
-                } else if (now < last) {
-                    onNavVisibilityChange(true)
-                }
+                if (now > last) onNavVisibilityChange(false)
+                else if (now < last) onNavVisibilityChange(true)
                 last = now
             }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .background(c.pageBg),
-        contentPadding = contentPaddingWithNavBars(
-            start = pagePadding,
-            end = pagePadding,
-            top = 0.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        item {
-            Column(modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
+    // 核心多选更新底部工作表（HyperOS3 风格，支持并发更新）
+    if (showUpdateCoreSheet) {
+        val scheme = MiuixTheme.colorScheme
+        val isDark = ThemeManager.shouldUseDarkTheme()
+        val successColor = if (isDark) Color(0xFF66BB6A) else Color(0xFF2E7D32)
+        val failColor = if (isDark) Color(0xFFEF5350) else Color(0xFFD32F2F)
+
+        HyperBottomSheet(
+            show = true,
+            onDismissRequest = { if (!isUpdating) showUpdateCoreSheet = false },
+            title = stringResource(R.string.tools_update_sheet_title)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text(
-                    text = stringResource(R.string.tools_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.SemiBold
+                    text = stringResource(R.string.tools_update_sheet_subtitle),
+                    style = MiuixTheme.textStyles.body2,
+                    color = scheme.onSurfaceSecondary,
+                    modifier = Modifier.padding(bottom = 4.dp)
                 )
-                Text(
-                    text = stringResource(R.string.tools_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = c.textSecondary,
-                    modifier = Modifier.padding(top = 6.dp)
-                )
-            }
-        }
 
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.tools_section_config_title),
-                subtitle = stringResource(R.string.tools_section_config_subtitle)
-            ) {
-                ToolsRowIcon(
-                    icon = Icons.Filled.Description,
-                    title = stringResource(R.string.tools_row_manage),
-                    subtitle = stringResource(R.string.tools_row_browse_search_create),
-                    onClick = onOpenConfigManage
-                )
-                ToolsRowIcon(
-                    icon = Icons.Filled.Tune,
-                    title = stringResource(R.string.tools_row_select),
-                    subtitle = stringResource(R.string.tools_row_choose_active_config),
-                    showDivider = false,
-                    onClick = onOpenConfigSelect
-                )
-            }
-        }
+                CORE_OPTIONS.forEach { option ->
+                    val isSelected = option.key in selectedCores
+                    val status = updateStatuses[option.key]
+                    val version = coreVersions[option.binName]
+                    val subtitle = stringResource(option.subtitleRes)
 
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.tools_section_apps_title),
-                subtitle = stringResource(R.string.tools_section_apps_subtitle)
-            ) {
-                ToolsRowIcon(
-                    icon = Icons.Filled.Apps,
-                    title = stringResource(R.string.tools_row_manage),
-                    subtitle = stringResource(R.string.tools_row_manage_app_rules),
-                    showDivider = false,
-                    onClick = onOpenApps
-                )
-            }
-        }
+                    val bgColor by animateColorAsState(
+                        when (status) {
+                            CoreUpdateStatus.Success -> successColor.copy(alpha = 0.10f)
+                            CoreUpdateStatus.Failed -> failColor.copy(alpha = 0.10f)
+                            CoreUpdateStatus.Updating -> scheme.primary.copy(alpha = 0.08f)
+                            else -> if (isSelected) scheme.primary.copy(alpha = 0.12f) else scheme.surfaceContainerHigh
+                        },
+                        animationSpec = tween(280), label = "upd_bg_${option.key}"
+                    )
+                    val borderColor by animateColorAsState(
+                        when (status) {
+                            CoreUpdateStatus.Success -> successColor.copy(alpha = 0.28f)
+                            CoreUpdateStatus.Failed -> failColor.copy(alpha = 0.28f)
+                            CoreUpdateStatus.Updating -> scheme.primary.copy(alpha = 0.20f)
+                            else -> if (isSelected) scheme.primary.copy(alpha = 0.28f) else Color.Transparent
+                        },
+                        animationSpec = tween(280), label = "upd_bd_${option.key}"
+                    )
+                    val titleColor by animateColorAsState(
+                        when (status) {
+                            CoreUpdateStatus.Success -> successColor
+                            CoreUpdateStatus.Failed -> failColor
+                            else -> if (isSelected) scheme.primary else scheme.onSurface
+                        },
+                        animationSpec = tween(280), label = "upd_tt_${option.key}"
+                    )
 
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.tools_section_network_control_title),
-                subtitle = stringResource(R.string.tools_section_network_control_subtitle)
-            ) {
-                ToolsRowIcon(
-                    icon = Icons.Filled.Router,
-                    title = stringResource(R.string.tools_row_open),
-                    subtitle = stringResource(R.string.tools_row_network_control_subtitle),
-                    showDivider = false,
-                    onClick = onOpenNetworkControl
-                )
-            }
-        }
-
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.tools_section_logs_title),
-                subtitle = stringResource(R.string.tools_section_logs_subtitle)
-            ) {
-                ToolsRowIcon(
-                    icon = Icons.AutoMirrored.Filled.Article,
-                    title = stringResource(R.string.tools_row_view),
-                    subtitle = stringResource(R.string.tools_row_open_unified_logs),
-                    showDivider = false,
-                    onClick = onOpenLogs
-                )
-            }
-        }
-
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.tools_section_update_title),
-                subtitle = stringResource(R.string.tools_section_update_subtitle)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedRectangle(14.dp))
-                        .background(accent.copy(alpha = 0.14f))
-                        .padding(12.dp)
-                ) {
-                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(34.dp)
-                                .background(accent.copy(alpha = 0.22f), shape = RoundedRectangle(10.dp)),
-                            contentAlignment = androidx.compose.ui.Alignment.Center
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(SmoothRoundedCornerShape(16.dp))
+                            .border(1.dp, borderColor, SmoothRoundedCornerShape(16.dp))
+                            .background(bgColor)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                enabled = !isUpdating
+                            ) {
+                                selectedCores = if (option.key in selectedCores)
+                                    selectedCores - option.key else selectedCores + option.key
+                                // 重选时清除该核心的旧状态
+                                updateStatuses = updateStatuses - option.key
+                            }
+                            .padding(horizontal = 16.dp, vertical = 14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Filled.Info,
-                                contentDescription = null,
-                                tint = accent,
-                                modifier = Modifier.size(18.dp)
+                            val fallback = rememberVectorPainter(Icons.Filled.Storage)
+                            AsyncImage(
+                                model = option.iconUrl,
+                                contentDescription = option.displayName,
+                                error = fallback,
+                                fallback = fallback,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
                             )
-                        }
 
-                        Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
-                            Text(
-                                text = stringResource(R.string.tools_update_tip_title),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = accent
-                            )
-                            Text(
-                                text = stringResource(R.string.tools_update_tip_body),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = c.textPrimary
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = option.displayName,
+                                    style = MiuixTheme.textStyles.body1,
+                                    fontWeight = FontWeight.Medium,
+                                    color = titleColor,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = if (version != null) "$subtitle · $version" else subtitle,
+                                    style = MiuixTheme.textStyles.footnote2,
+                                    color = scheme.onSurfaceSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+
+                            // 右侧状态指示器
+                            when (status) {
+                                CoreUpdateStatus.Updating ->
+                                    InfiniteProgressIndicator(modifier = Modifier.size(20.dp))
+                                CoreUpdateStatus.Success ->
+                                    Icon(Icons.Filled.CheckCircle, null, tint = successColor, modifier = Modifier.size(20.dp))
+                                CoreUpdateStatus.Failed ->
+                                    Icon(Icons.Filled.Cancel, null, tint = failColor, modifier = Modifier.size(20.dp))
+                                else -> if (isSelected) {
+                                    Icon(Icons.Filled.Check, null, tint = scheme.primary, modifier = Modifier.size(20.dp))
+                                }
+                            }
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                UpdateTargetRow(
-                    leftIcon = Icons.Filled.Storage,
-                    title = stringResource(R.string.tools_update_target_core),
-                    subtitle = stringResource(R.string.tools_update_subtitle_core),
-                    onRowClick = {
-                        if (BuildConfig.FLAVOR != "bfr") {
-                            showUpdateCoreSheet = true
-                        }
-                    },
-                    onUpdate = {
-                        val kernel = mapKernelNameForUpdate(selectedUpdateCore)
-                        scope.launch {
-                            toastMessage = context.getString(R.string.tools_update_started, updateTargetCoreLabel)
-                            val success = BoxApi.updateKernel(kernel)
-                            toastMessage = if (success) {
-                                context.getString(R.string.tools_update_completed, kernel)
-                            } else {
-                                context.getString(R.string.tools_update_failed)
-                            }
-                        }
+                // 更新按钮：显示选中数量 / 更新中进度
+                Button(
+                    onClick = { updateSelectedCores() },
+                    enabled = selectedCores.isNotEmpty() && !isUpdating,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColorsPrimary()
+                ) {
+                    if (isUpdating) {
+                        val done = updateStatuses.count { it.value != CoreUpdateStatus.Updating }
+                        val total = updateStatuses.size
+                        InfiniteProgressIndicator(modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "$done / $total",
+                            style = MiuixTheme.textStyles.button
+                        )
+                    } else {
+                        Text(
+                            text = stringResource(R.string.action_update) +
+                                    if (selectedCores.size > 1) " (${selectedCores.size})" else "",
+                            style = MiuixTheme.textStyles.button
+                        )
                     }
-                )
-                UpdateTargetRow(
-                    leftIcon = Icons.Filled.Link,
-                    title = stringResource(R.string.tools_update_target_subscription),
-                    subtitle = stringResource(R.string.tools_update_subtitle_subscription),
-                    onRowClick = onOpenUpdateSubscription,
-                    onUpdate = {
-                        scope.launch {
-                            toastMessage = context.getString(R.string.tools_update_started, updateTargetSubscriptionLabel)
-                            val success = BoxApi.updateSubs()
-                            toastMessage = if (success) {
-                                context.getString(R.string.tools_update_completed_subscription)
-                            } else {
-                                context.getString(R.string.tools_update_failed)
-                            }
-                        }
-                    }
-                )
-                UpdateTargetRow(
-                    leftIcon = Icons.Filled.Language,
-                    title = stringResource(R.string.tools_update_target_webui),
-                    subtitle = stringResource(R.string.tools_update_subtitle_webui),
-                    showDivider = BuildConfig.FLAVOR != "bfr",
-                    onRowClick = {},
-                    onUpdate = {
-                        scope.launch {
-                            toastMessage = context.getString(R.string.tools_update_started, updateTargetWebuiLabel)
-                            val success = BoxApi.updateWebUI()
-                            toastMessage = if (success) {
-                                context.getString(R.string.tools_update_completed_webui)
-                            } else {
-                                context.getString(R.string.tools_update_failed)
-                            }
-                        }
-                    }
-                )
-
-                if (BuildConfig.FLAVOR != "bfr") {
-                    val updateTargetCnipLabel = stringResource(R.string.tools_update_target_cnip)
-                    UpdateTargetRow(
-                        leftIcon = Icons.Filled.Public,
-                        title = stringResource(R.string.tools_update_target_cnip),
-                        subtitle = stringResource(R.string.tools_update_subtitle_cnip),
-                        showDivider = false,
-                        onRowClick = onOpenUpdateCnip,
-                        onUpdate = {
-                            scope.launch {
-                                toastMessage = context.getString(R.string.tools_update_started, updateTargetCnipLabel)
-                                val success = BoxApi.updateCnipList()
-                                toastMessage = if (success) {
-                                    context.getString(R.string.tools_update_completed_cnip)
-                                } else {
-                                    context.getString(R.string.tools_update_failed)
-                                }
-                            }
-                        }
-                    )
                 }
             }
         }
+    }
 
-        item { Spacer(modifier = Modifier.height(8.dp)) }
+    // 标准 Miuix Scaffold + SmallTopAppBar
+    Scaffold(
+        topBar = {
+            SmallTopAppBar(
+                title = stringResource(R.string.tools_title),
+                subtitle = stringResource(R.string.tools_subtitle)
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = contentPaddingWithNavBars(
+                top = innerPadding.calculateTopPadding()
+            ),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            // ─── 配置管理 ──────────────────────────────────────────
+            item {
+                PreferenceSection(title = stringResource(R.string.tools_section_config_title)) {
+                    ArrowPreference(
+                        title = stringResource(R.string.tools_row_manage),
+                        summary = stringResource(R.string.tools_row_browse_search_create),
+                        startAction = { PreferenceIcon(Icons.Filled.Description) },
+                        onClick = onOpenConfigManage
+                    )
+                    PreferenceDivider()
+                    ArrowPreference(
+                        title = stringResource(R.string.tools_row_select),
+                        summary = stringResource(R.string.tools_row_choose_active_config),
+                        startAction = { PreferenceIcon(Icons.Filled.Tune) },
+                        onClick = onOpenConfigSelect
+                    )
+                }
+            }
+
+            // ─── 应用管理 ──────────────────────────────────────────
+            item {
+                PreferenceSection(title = stringResource(R.string.tools_section_apps_title)) {
+                    ArrowPreference(
+                        title = stringResource(R.string.tools_row_manage),
+                        summary = stringResource(R.string.tools_row_manage_app_rules),
+                        startAction = { PreferenceIcon(Icons.Filled.Apps) },
+                        onClick = onOpenApps
+                    )
+                }
+            }
+
+            // ─── 网络控制 ──────────────────────────────────────────
+            item {
+                PreferenceSection(title = stringResource(R.string.tools_section_network_control_title)) {
+                    ArrowPreference(
+                        title = stringResource(R.string.tools_row_open),
+                        summary = stringResource(R.string.tools_row_network_control_subtitle),
+                        startAction = { PreferenceIcon(Icons.Filled.Router) },
+                        onClick = onOpenNetworkControl
+                    )
+                }
+            }
+
+            // ─── 日志 ──────────────────────────────────────────────
+            item {
+                PreferenceSection(title = stringResource(R.string.tools_section_logs_title)) {
+                    ArrowPreference(
+                        title = stringResource(R.string.tools_row_view),
+                        summary = stringResource(R.string.tools_row_open_unified_logs),
+                        startAction = { PreferenceIcon(Icons.AutoMirrored.Filled.Article) },
+                        onClick = onOpenLogs
+                    )
+                }
+            }
+
+            // ─── 更新 ──────────────────────────────────────────────
+            item {
+                PreferenceSection(title = stringResource(R.string.tools_section_update_title)) {
+                    ArrowPreference(
+                        title = stringResource(R.string.tools_update_target_core),
+                        summary = stringResource(R.string.tools_update_subtitle_core),
+                        startAction = { PreferenceIcon(Icons.Filled.Storage) },
+                        endActions = {
+                            Text(
+                                text = selectedCores.joinToString(),
+                                style = MiuixTheme.textStyles.body2,
+                                color = MiuixTheme.colorScheme.onSurfaceVariantActions,
+                                modifier = Modifier.padding(end = 6.dp)
+                            )
+                        },
+                        onClick = {
+                            if (BuildConfig.FLAVOR != "bfr") showUpdateCoreSheet = true
+                        }
+                    )
+                    PreferenceDivider()
+                    ArrowPreference(
+                        title = stringResource(R.string.tools_update_target_subscription),
+                        summary = stringResource(R.string.tools_update_subtitle_subscription),
+                        startAction = { PreferenceIcon(Icons.Filled.Link) },
+                        endActions = {
+                            ActionText(
+                                text = stringResource(R.string.action_update),
+                                onClick = {
+                                    scope.launch {
+                                        toastMessage = context.getString(
+                                            R.string.tools_update_started,
+                                            context.getString(R.string.tools_update_target_subscription)
+                                        )
+                                        val success = BoxApi.updateSubs()
+                                        toastMessage = if (success) {
+                                            context.getString(R.string.tools_update_completed_subscription)
+                                        } else {
+                                            context.getString(R.string.tools_update_failed)
+                                        }
+                                    }
+                                }
+                            )
+                        },
+                        onClick = onOpenUpdateSubscription
+                    )
+                    PreferenceDivider()
+                    ArrowPreference(
+                        title = stringResource(R.string.tools_update_target_webui),
+                        summary = stringResource(R.string.tools_update_subtitle_webui),
+                        startAction = { PreferenceIcon(Icons.Filled.Language) },
+                        endActions = {
+                            ActionText(
+                                text = stringResource(R.string.action_update),
+                                onClick = {
+                                    scope.launch {
+                                        toastMessage = context.getString(
+                                            R.string.tools_update_started,
+                                            context.getString(R.string.tools_update_target_webui)
+                                        )
+                                        val success = BoxApi.updateWebUI()
+                                        toastMessage = if (success) {
+                                            context.getString(R.string.tools_update_completed_webui)
+                                        } else {
+                                            context.getString(R.string.tools_update_failed)
+                                        }
+                                    }
+                                }
+                            )
+                        },
+                        onClick = {}
+                    )
+
+                    if (BuildConfig.FLAVOR != "bfr") {
+                        PreferenceDivider()
+                        ArrowPreference(
+                            title = stringResource(R.string.tools_update_target_cnip),
+                            summary = stringResource(R.string.tools_update_subtitle_cnip),
+                            startAction = { PreferenceIcon(Icons.Filled.Public) },
+                            endActions = {
+                                ActionText(
+                                    text = stringResource(R.string.action_update),
+                                    onClick = {
+                                        scope.launch {
+                                            toastMessage = context.getString(
+                                                R.string.tools_update_started,
+                                                context.getString(R.string.tools_update_target_cnip)
+                                            )
+                                            val success = BoxApi.updateCnipList()
+                                            toastMessage = if (success) {
+                                                context.getString(R.string.tools_update_completed_cnip)
+                                            } else {
+                                                context.getString(R.string.tools_update_failed)
+                                            }
+                                        }
+                                    }
+                                )
+                            },
+                            onClick = onOpenUpdateCnip
+                        )
+                    }
+                }
+            }
+
+            // ─── 监控守护 ──────────────────────────────────────────
+            item {
+                PreferenceSection(title = stringResource(R.string.monitor_title)) {
+                    ArrowPreference(
+                        title = stringResource(R.string.monitor_title),
+                        summary = stringResource(R.string.monitor_subtitle),
+                        startAction = { PreferenceIcon(Icons.Filled.Shield) },
+                        onClick = onOpenMonitorSettings
+                    )
+                }
+            }
+
+            // ─── SmartDNS ──────────────────────────────────────────
+            item {
+                PreferenceSection(title = "SmartDNS") {
+                    ArrowPreference(
+                        title = "SmartDNS",
+                        summary = stringResource(R.string.smartdns_entry_subtitle),
+                        startAction = { PreferenceIcon(Icons.Filled.Dns) },
+                        onClick = onOpenSmartDns
+                    )
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+        }
     }
 }
 
+// ─── 更新状态 ─────────────────────────────────────────────────────────────────
+
+private enum class CoreUpdateStatus { Updating, Success, Failed }
+
+// ─── 核心选项配置 ─────────────────────────────────────────────────────────────
+
+private data class CoreDisplayOption(
+    val key: String,         // 选择标识（如 "mihomo"）
+    val displayName: String, // 显示名（如 "Mihomo"）
+    val subtitleRes: Int,    // 描述字符串资源 ID
+    val iconUrl: String,     // 核心项目图标 URL
+    val binName: String      // 用于版本检测的二进制名
+)
+
+// 核心项目图标（jsdelivr CDN / GitHub）
+private const val ICON_MIHOMO = "https://cdn.jsdelivr.net/gh/MetaCubeX/mihomo@Alpha/docs/logo.png"
+private const val ICON_SINGBOX = "https://cdn.jsdelivr.net/gh/SagerNet/sing-box-for-android@main/app/src/main/ic_launcher-playstore.png"
+private const val ICON_XRAY = "https://avatars.githubusercontent.com/u/71564206?s=128&v=4"
+private const val ICON_V2FLY = "https://cdn.jsdelivr.net/gh/v2fly/v2fly-github-io@master/docs/.vuepress/public/readme-logo.png"
+private const val ICON_HYSTERIA = "https://cdn.jsdelivr.net/gh/apernet/hysteria@master/media-kit/png/symbol%201@2x.png"
+
+private val CORE_OPTIONS = listOf(
+    CoreDisplayOption("mihomo", "Mihomo", R.string.tools_update_core_mihomo_subtitle, ICON_MIHOMO, "mihomo"),
+    CoreDisplayOption("mihomo_smart", "Mihomo Smart", R.string.tools_update_core_mihomo_smart_subtitle, ICON_MIHOMO, "mihomo"),
+    CoreDisplayOption("sing-box", "Sing-Box", R.string.tools_update_core_sing_box_subtitle, ICON_SINGBOX, "sing-box"),
+    CoreDisplayOption("xray", "Xray", R.string.tools_update_core_xray_subtitle, ICON_XRAY, "xray"),
+    CoreDisplayOption("v2ray", "V2Ray", R.string.tools_update_core_v2ray_subtitle, ICON_V2FLY, "v2fly"),
+    CoreDisplayOption("hysteria", "Hysteria", R.string.tools_update_core_hysteria_subtitle, ICON_HYSTERIA, "hysteria"),
+)
+
+/**
+ * 从 shell 版本输出中提取干净的版本号。
+ * 三级匹配策略，避免误匹配时间戳片段（如 55.823415617）。
+ */
+private fun parseCleanVersion(raw: String): String? {
+    val s = raw.trim()
+    if (s.isBlank()) return null
+    // 1. 结构化标签：version="x.x.x" / Version: x.x.x / version x.x.x
+    Regex("""(?i)version[=:\s]+"?v?(\d+\.\d+(?:\.\d+)?(?:-[\w.]+)?)"?""")
+        .find(s)?.let { return "v${it.groupValues[1]}" }
+    // 2. 显式 v 前缀：v1.18.1（排除 go1.22 等无 v 前缀的）
+    Regex("""\bv(\d+\.\d+(?:\.\d+)?(?:-[\w.]+)?)""")
+        .find(s)?.let { return "v${it.groupValues[1]}" }
+    // 3. 已知核心名 + 版本号：Xray 26.3.27 / V2Ray 5.22.0
+    Regex("""(?i)(?:mihomo|sing-box|xray|v2ray|v2fly|hysteria)\s+(?:meta\s+)?v?(\d+\.\d+\.\d+(?:-[\w.]+)?)""")
+        .find(s)?.let { return "v${it.groupValues[1]}" }
+    return null
+}
+
+// ─── 条目图标 ───────────────────────────────────────────────────────────────
+
 @Composable
-private fun UpdateTargetRow(
-    leftIcon: androidx.compose.ui.graphics.vector.ImageVector,
+private fun PreferenceIcon(icon: ImageVector) {
+    Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = MiuixTheme.colorScheme.onBackground,
+        modifier = Modifier.padding(end = 16.dp)
+    )
+}
+
+// ─── 分区容器 ───────────────────────────────────────────────────────────────
+
+@Composable
+private fun PreferenceSection(
     title: String,
-    subtitle: String,
-    showDivider: Boolean = true,
-    onRowClick: () -> Unit,
-    onUpdate: () -> Unit
+    content: @Composable () -> Unit
 ) {
-    val c = appColors()
-    val interactionSource = remember { MutableInteractionSource() }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onRowClick
-            )
-            .padding(horizontal = 6.dp, vertical = 10.dp),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .background(c.cardAlt, shape = RoundedRectangle(10.dp)),
-            contentAlignment = androidx.compose.ui.Alignment.Center
-        ) {
-            Icon(
-                imageVector = leftIcon,
-                contentDescription = stringResource(R.string.action_update),
-                tint = c.textPrimary,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 12.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = c.textPrimary
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = c.textSecondary,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
-        }
-
-        Icon(
-            imageVector = Icons.Filled.SystemUpdate,
-            contentDescription = stringResource(R.string.action_update),
-            tint = c.textPrimary,
-            modifier = Modifier
-                .size(18.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onUpdate() }
-        )
-    }
-
-    if (showDivider) {
-        Box(
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SmallTitle(text = title)
+        Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 52.dp)
-                .height(1.dp)
-                .background(c.divider)
-        )
+                .padding(horizontal = 12.dp)
+                .padding(bottom = 6.dp)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                content()
+            }
+        }
     }
 }
 
+// ─── 条目间分隔线 ───────────────────────────────────────────────────────────
+
 @Composable
-private fun UpdateCoreOptionRow(
-    title: String,
-    subtitle: String,
-    selected: Boolean,
-    showDivider: Boolean,
-    onRowClick: () -> Unit,
-    onUpdate: () -> Unit
-) {
-    val c = appColors()
-    val interactionSource = remember { MutableInteractionSource() }
-    Row(
+private fun PreferenceDivider() {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .height(0.5.dp)
+            .background(MiuixTheme.colorScheme.dividerLine.copy(alpha = 0.08f))
+    )
+}
+
+// ─── 行内操作文字（无背景，primary 色） ─────────────────────────────────────
+
+@Composable
+private fun ActionText(
+    text: String,
+    onClick: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    Text(
+        text = text,
+        style = MiuixTheme.textStyles.body2,
+        color = MiuixTheme.colorScheme.primary,
+        modifier = Modifier
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
-                onClick = onRowClick
+                onClick = onClick
             )
-            .padding(horizontal = 6.dp, vertical = 10.dp),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(34.dp)
-                .background(c.cardAlt, shape = RoundedRectangle(10.dp)),
-            contentAlignment = androidx.compose.ui.Alignment.Center
-        ) {
-            Icon(
-                imageVector = if (selected) Icons.Filled.CheckCircle else Icons.Filled.Storage,
-                contentDescription = null,
-                tint = c.textPrimary,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 12.dp)
-        ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = c.textPrimary
-            )
-            Text(
-                text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
-                color = c.textSecondary,
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
-        }
-
-        Icon(
-            imageVector = Icons.Filled.SystemUpdate,
-            contentDescription = stringResource(R.string.action_update),
-            tint = c.textPrimary,
-            modifier = Modifier
-                .size(18.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onUpdate() }
-        )
-    }
-
-    if (showDivider) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 52.dp)
-                .height(1.dp)
-                .background(c.divider)
-        )
-    }
+            .padding(end = 6.dp)
+    )
 }

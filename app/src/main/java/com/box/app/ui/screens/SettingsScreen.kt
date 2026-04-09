@@ -33,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -73,11 +74,8 @@ import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -85,7 +83,6 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -103,6 +100,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
@@ -140,18 +138,15 @@ import com.box.app.data.backend.BoxApi
 import com.box.app.data.backend.ShellExecutor
 import com.box.app.data.repo.HomeRepository
 import com.box.app.data.repo.ConfigRepository
-import com.box.app.ui.components.SettingsToggleRow
-import com.box.app.ui.components.ToolsRowIcon
-import com.box.app.ui.components.ToolsSectionCard
-import com.box.app.ui.components.bottomsheets.AboutBottomSheet
+import com.box.app.ui.screens.Settings.AboutScreen
 import com.box.app.ui.components.bottomsheets.AppModalBottomSheet
+import com.box.app.ui.miuix.HyperBottomSheet
+import com.box.app.ui.miuix.HyperFilterChip
+import top.yukonga.miuix.kmp.overlay.OverlayDialog
 import com.box.app.ui.components.bottomsheets.UpdateSheetMode
 import com.box.app.ui.components.bottomsheets.UpdateBottomSheet
 import com.box.app.ui.components.contentPaddingWithNavBars
 import com.box.app.ui.components.LocalFloatingNavBarSpaceDp
-import com.box.app.ui.dialogs.LanguageSelectionDialog
-import com.box.app.ui.dialogs.SystemBarSelectionDialog
-import com.box.app.ui.dialogs.ThemeSelectionDialog
 import com.box.app.ui.theme.appAccentColor
 import com.box.app.ui.theme.appColors
 import com.box.app.ui.screens.Settings.OpenSourceLicensesScreen
@@ -159,6 +154,7 @@ import com.box.app.utils.AppLanguage
 import com.box.app.utils.LanguageManager
 import com.box.app.utils.LatencyTarget
 import com.box.app.utils.LatencyTargetsManager
+import com.box.app.utils.MapleFontManager
 import com.box.app.utils.ThemeManager
 import com.box.app.utils.ThemeMode
 import com.box.app.utils.UiScaleManager
@@ -167,10 +163,27 @@ import com.box.app.BuildConfig
 import com.box.app.R
 import com.kyant.shapes.Capsule
 import com.kyant.shapes.RoundedRectangle
-
 import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SmallTitle
+import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+
+import top.yukonga.miuix.kmp.preference.ArrowPreference
+import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.preference.WindowDropdownPreference
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.box.app.ui.effect.androidRenderBlur
+import com.box.app.ui.effect.navigationCancelSpec
+import com.box.app.ui.effect.navigationPredictiveBackProgress
+import com.box.app.ui.effect.navigationPopSpec
+import com.box.app.ui.effect.navigationPushSpec
+import com.box.app.ui.effect.navigationSceneProgress
+import com.box.app.ui.effect.supportsAndroidRenderBlur
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,50 +196,53 @@ fun SettingsScreen(
     val pagePadding = 16.dp
     val listState = rememberLazyListState()
 
-    var showOpenSourceLicenses by rememberSaveable { mutableStateOf(false) }
+    // 子页面状态
+    var subPage by rememberSaveable { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(showOpenSourceLicenses) {
-        val atRoot = !showOpenSourceLicenses
+    LaunchedEffect(subPage) {
+        val atRoot = subPage == null
         onMainPagerUserScrollEnabledChange(atRoot)
         onMainTabAtRootChange(atRoot)
-        if (!atRoot) {
-            onNavVisibilityChange(false)
-        }
+        if (!atRoot) onNavVisibilityChange(false)
     }
 
     var containerWidthPx by remember { mutableFloatStateOf(0f) }
-
     val scope = rememberCoroutineScope()
     val transition = remember { androidx.compose.animation.core.Animatable(0f) }
 
-    LaunchedEffect(showOpenSourceLicenses) {
-        val target = if (showOpenSourceLicenses) 1f else 0f
+    LaunchedEffect(subPage) {
+        val target = if (subPage != null) 1f else 0f
         if (transition.targetValue == target && transition.value == target) return@LaunchedEffect
         transition.animateTo(
-            targetValue = target,
-            animationSpec = tween(durationMillis = 320)
+            target,
+            animationSpec = if (target > transition.value) {
+                navigationPushSpec()
+            } else {
+                navigationPopSpec()
+            }
         )
     }
 
-    if (showOpenSourceLicenses) {
-        PredictiveBackHandler {
-                progress: Flow<androidx.activity.BackEventCompat> ->
+    if (subPage != null) {
+        PredictiveBackHandler { progress: Flow<androidx.activity.BackEventCompat> ->
             try {
                 progress.collect { backEvent ->
-                    transition.snapTo((1f - backEvent.progress).coerceIn(0f, 1f))
+                    transition.snapTo(navigationPredictiveBackProgress(backEvent.progress))
                 }
-                showOpenSourceLicenses = false
+                subPage = null
             } catch (e: CancellationException) {
                 scope.launch {
                     transition.animateTo(
-                        targetValue = 1f,
-                        animationSpec = tween(durationMillis = 220)
+                        1f,
+                        animationSpec = navigationCancelSpec()
                     )
                 }
                 throw e
             }
         }
     }
+
+    val blurSupported = remember { supportsAndroidRenderBlur() }
 
     Box(
         modifier = Modifier
@@ -235,42 +251,75 @@ fun SettingsScreen(
     ) {
         val w = containerWidthPx
         val t = transition.value
+        val easedT = navigationSceneProgress(t)
+        val mainOffsetX = if (w > 0f) (-w * 0.18f) * easedT else 0f
+        val mainScale = 1f - 0.05f * easedT
+        val subX = if (w > 0f) w * (1f - easedT) else 0f
 
-        val mainX = if (w > 0f) (-w / 3f) * t else 0f
-        val licensesX = if (w > 0f) w * (1f - t) else 0f
-
+        // 主页面 — 作为 backdrop 源
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    translationX = mainX
-                    alpha = 1f
+                    translationX = mainOffsetX
+                    scaleX = mainScale
+                    scaleY = mainScale
                 }
+                .androidRenderBlur(
+                    radius = (40f * t).coerceAtMost(40f),
+                    enabled = blurSupported && t > 0.02f
+                )
         ) {
             SettingsMainContent(
                 onNavVisibilityChange = onNavVisibilityChange,
                 listState = listState,
                 pagePadding = pagePadding,
                 c = c,
-                onOpenOpenSourceLicenses = { showOpenSourceLicenses = true }
+                onOpenOpenSourceLicenses = { subPage = "licenses" },
+                onOpenAbout = { subPage = "about" }
             )
         }
 
-        if (t > 0f || showOpenSourceLicenses) {
+        if (t > 0f || subPage != null) {
+            // 模糊遮罩
+            if (blurSupported && t > 0.02f) {
+                val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+                val dimColor = if (isDark) Color.Black.copy(alpha = 0.35f * t)
+                    else Color(0xFF606060).copy(alpha = 0.12f * t)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(dimColor)
+                )
+            } else if (t > 0.01f) {
+                val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+                val fallbackAlpha = if (isDark) 0.35f * t else 0.18f * t
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = fallbackAlpha }
+                        .background(if (isDark) Color.Black else Color.Gray)
+                )
+            }
+
+            // 子页面 — 只平移，不透明度变化
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer {
-                        translationX = licensesX
-                        alpha = t
-                    }
+                    .graphicsLayer { translationX = subX }
+                    .background(MiuixTheme.colorScheme.background)
             ) {
                 CompositionLocalProvider(LocalFloatingNavBarSpaceDp provides 0.dp) {
-                    OpenSourceLicensesScreen(
-                        onBack = { showOpenSourceLicenses = false },
-                        onNavVisibilityChange = onNavVisibilityChange,
-                        enableBackHandler = false
-                    )
+                    when (subPage) {
+                        "licenses" -> OpenSourceLicensesScreen(
+                            onBack = { subPage = null },
+                            onNavVisibilityChange = onNavVisibilityChange,
+                            enableBackHandler = false
+                        )
+                        "about" -> AboutScreen(
+                            onBack = { subPage = null }
+                        )
+                    }
                 }
             }
         }
@@ -287,7 +336,8 @@ private fun SettingsMainContent(
     listState: androidx.compose.foundation.lazy.LazyListState,
     pagePadding: androidx.compose.ui.unit.Dp,
     c: com.box.app.ui.theme.AppColors,
-    onOpenOpenSourceLicenses: () -> Unit
+    onOpenOpenSourceLicenses: () -> Unit,
+    onOpenAbout: () -> Unit = {}
 ) {
 
     LaunchedEffect(listState) {
@@ -309,7 +359,6 @@ private fun SettingsMainContent(
     val accent = appAccentColor()
     val isDark = ThemeManager.shouldUseDarkTheme()
     val currentThemeMode by ThemeManager.themeMode.collectAsState()
-    val trueBlackEnabled by ThemeManager.trueBlack.collectAsState()
     val systemBarSettings by ThemeManager.systemBarSettings.collectAsState()
     val liquidGlassTranslucent by ThemeManager.liquidGlassTranslucent.collectAsState()
     val liquidGlassBlurDp by ThemeManager.liquidGlassBlurDp.collectAsState()
@@ -318,6 +367,7 @@ private fun SettingsMainContent(
     val blurEffectsEnabled by ThemeManager.blurEffectsEnabled.collectAsState()
     val blurEffectsSupported = ThemeManager.supportsBlurEffects()
     val blurEffectsActive = blurEffectsEnabled && blurEffectsSupported
+    val liquidGlassNavBarEnabled by ThemeManager.liquidGlassNavBar.collectAsState()
     val uiScalePercent by UiScaleManager.uiScalePercent.collectAsState()
     val currentLanguage by LanguageManager.language.collectAsState()
     val latencyTargets by LatencyTargetsManager.targets.collectAsState()
@@ -330,10 +380,9 @@ private fun SettingsMainContent(
         if (!uiScaleDragging) pendingUiScalePercent = uiScalePercent.toFloat()
     }
 
-    var showThemeDialog by remember { mutableStateOf(false) }
-    var showSystemBarDialog by remember { mutableStateOf(false) }
-    var showLanguageDialog by remember { mutableStateOf(false) }
-    var showAppearanceMoreSheet by remember { mutableStateOf(false) }
+    var showAppearanceTuningSheet by remember { mutableStateOf(false) }
+    var showProxyTrafficFilterSheet by remember { mutableStateOf(false) }
+    var showLatencyTargetsSheet by remember { mutableStateOf(false) }
     var showBackupRestoreDialog by remember { mutableStateOf(false) }
 
     val appPrefs = remember { context.getSharedPreferences("app_settings", Context.MODE_PRIVATE) }
@@ -356,7 +405,6 @@ private fun SettingsMainContent(
         mutableStateOf(subPrefs.getString("proxy_traffic_filter_chains", defaultProxyTrafficFilter) ?: defaultProxyTrafficFilter)
     }
 
-    var showAboutDialog by remember { mutableStateOf(false) }
     var appVersionText by remember { mutableStateOf("") }
     var moduleVersionText by remember { mutableStateOf("-") }
     var updateResult by remember { mutableStateOf<com.box.app.data.model.UpdateCheckResult?>(null) }
@@ -656,8 +704,7 @@ private fun SettingsMainContent(
     }
 
     suspend fun openUpdateSheetFor(
-        target: UpdateTarget,
-        closeAboutDialog: Boolean
+        target: UpdateTarget
     ): Boolean {
         return try {
             when (target) {
@@ -685,7 +732,6 @@ private fun SettingsMainContent(
                 false
             } else {
                 showUpdateDialog = true
-                if (closeAboutDialog) showAboutDialog = false
                 true
             }
         } catch (_: Exception) {
@@ -698,57 +744,10 @@ private fun SettingsMainContent(
         }
     }
 
-    if (showAboutDialog) {
-        val aboutSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
-        LaunchedEffect(Unit) {
-            refreshModuleVersion()
-        }
-
-        AppModalBottomSheet(
-            onDismissRequest = { showAboutDialog = false },
-            sheetState = aboutSheetState
-        ) {
-            AboutBottomSheet(
-                appVersion = appVersionText,
-                moduleVersion = moduleVersionText,
-                appIcon = appIconPainter,
-                onModuleClick = {
-                    val url = if (BuildConfig.FLAVOR == "bfr") {
-                        "https://github.com/taamarin/box_for_magisk"
-                    } else {
-                        "https://github.com/boxproxy/box"
-                    }
-                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                },
-                onChannelClick = {
-                    val url = if (BuildConfig.FLAVOR == "bfr") {
-                        "https://t.me/nothing_taamarin"
-                    } else {
-                        "https://t.me/zero_o0"
-                    }
-                    runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                },
-                onAppVersionClick = {
-                    scope.launch {
-                        openUpdateSheetFor(UpdateTarget.APP, closeAboutDialog = true)
-                    }
-                },
-                onModuleVersionClick = {
-                    scope.launch {
-                        openUpdateSheetFor(UpdateTarget.MODULE, closeAboutDialog = true)
-                    }
-                }
-            )
-        }
-    }
 
     if (showUpdateDialog && updateResult != null) {
-        val updateSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
         AppModalBottomSheet(
-            onDismissRequest = { showUpdateDialog = false },
-            sheetState = updateSheetState
+            onDismissRequest = { showUpdateDialog = false }
         ) {
             UpdateBottomSheet(
                 updateResult = updateResult!!,
@@ -769,144 +768,103 @@ private fun SettingsMainContent(
         }
     }
 
-    if (showThemeDialog) {
-        ThemeSelectionDialog(
-            currentMode = currentThemeMode,
-            onDismiss = { showThemeDialog = false },
-            onSelect = { mode ->
-                ThemeManager.setThemeMode(context, mode)
-                showThemeDialog = false
+    val themeLabel = when (currentThemeMode) {
+        ThemeMode.LIGHT -> stringResource(R.string.settings_theme_light)
+        ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
+        ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_follow_system)
+    }
+    val languageLabel = when (currentLanguage) {
+        AppLanguage.SYSTEM -> stringResource(R.string.settings_language_follow_system)
+        AppLanguage.ENGLISH -> stringResource(R.string.settings_language_english)
+        AppLanguage.CHINESE -> stringResource(R.string.settings_language_chinese)
+    }
+    val transparentLabel = stringResource(R.string.settings_system_bars_transparent)
+    val opaqueLabel = stringResource(R.string.settings_system_bars_opaque)
+    val blurSummary = stringResource(
+        if (blurEffectsSupported) {
+            R.string.settings_blur_effects_subtitle
+        } else {
+            R.string.settings_blur_effects_unsupported_subtitle
+        }
+    )
+    val uiScaleSummary = stringResource(R.string.settings_ui_scale, pendingUiScalePercent.roundToInt())
+    val visualTuneSummary = buildString {
+        append(uiScaleSummary)
+        if (blurEffectsActive) {
+            append("  ·  Blur ")
+            append(liquidGlassBlurDp.roundToInt())
+            append("dp")
+            if (liquidGlassTranslucent) {
+                append("  ·  Lens ")
+                append((liquidGlassLensStrength * 10f).roundToInt() / 10f)
+                append("x")
             }
-        )
+        }
     }
-
-    if (showSystemBarDialog) {
-        SystemBarSelectionDialog(
-            currentSettings = systemBarSettings,
-            onDismiss = { showSystemBarDialog = false },
-            onConfirm = { settings ->
-                ThemeManager.setSystemBarSettings(context, settings)
-                showSystemBarDialog = false
-            }
-        )
+    val latencyPreview = listOf(
+        latencyName1 to latencyUrl1,
+        latencyName2 to latencyUrl2,
+        latencyName3 to latencyUrl3
+    ).joinToString("  ·  ") { (name, url) ->
+        val resolvedName = name.trim().ifBlank { "-" }
+        val host = runCatching { Uri.parse(url.trim()).host }.getOrNull().orEmpty()
+        if (host.isBlank()) resolvedName else "$resolvedName · $host"
     }
+    val themeEntries = listOf(
+        stringResource(R.string.settings_theme_follow_system),
+        stringResource(R.string.settings_theme_light),
+        stringResource(R.string.settings_theme_dark)
+    )
+    val languageEntries = listOf(
+        stringResource(R.string.settings_language_follow_system),
+        stringResource(R.string.settings_language_english),
+        stringResource(R.string.settings_language_chinese)
+    )
+    val systemBarEntries = listOf(
+        transparentLabel,
+        opaqueLabel
+    )
 
-    if (showLanguageDialog) {
-        LanguageSelectionDialog(
-            currentLanguage = currentLanguage,
-            onDismiss = { showLanguageDialog = false },
-            onSelect = { lang ->
-                LanguageManager.setLanguage(context, lang)
-                showLanguageDialog = false
-            }
-        )
-    }
+    BackupRestoreSheet(
+        show = showBackupRestoreDialog,
+        onDismiss = { showBackupRestoreDialog = false }
+    )
 
-    if (showBackupRestoreDialog) {
-        BackupRestoreDialog(
-            onDismiss = { showBackupRestoreDialog = false }
-        )
-    }
-
-    if (showAppearanceMoreSheet) {
-        val appearanceMoreSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-
+    if (showAppearanceTuningSheet) {
         AppModalBottomSheet(
-            onDismissRequest = { showAppearanceMoreSheet = false },
-            sheetState = appearanceMoreSheetState
+            onDismissRequest = { showAppearanceTuningSheet = false }
         ) {
             val sheetScrollState = rememberScrollState()
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 10.dp, bottom = 6.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.Center)
-                            .clearAndSetSemantics { }
-                            .size(width = 28.dp, height = 3.dp)
-                            .clip(Capsule())
-                            .background(c.divider.copy(alpha = 0.42f))
-                    )
-                }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(sheetScrollState)
+                    .padding(horizontal = 18.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_appearance_more),
+                    style = MiuixTheme.textStyles.title2,
+                    fontWeight = FontWeight.SemiBold,
+                    color = c.textPrimary
+                )
+                Text(
+                    text = stringResource(R.string.settings_appearance_more_subtitle),
+                    style = MiuixTheme.textStyles.body2,
+                    color = c.textSecondary,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 18.dp)
+                )
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .verticalScroll(sheetScrollState)
-                        .padding(horizontal = 16.dp, vertical = 0.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_appearance_more),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = stringResource(R.string.settings_appearance_more_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = c.textSecondary,
-                        modifier = Modifier.padding(top = 6.dp, bottom = 14.dp)
-                    )
-
-                    SettingsToggleRow(
-                        icon = Icons.Filled.DarkMode,
-                        title = stringResource(R.string.settings_true_black),
-                        subtitle = stringResource(R.string.settings_true_black_subtitle),
-                        checked = trueBlackEnabled,
-                        onCheckedChange = { ThemeManager.setTrueBlack(context, it) },
-                        showDivider = true
-                    )
-
-                    SettingsToggleRow(
-                        icon = Icons.Filled.BlurOn,
-                        title = stringResource(R.string.settings_blur_effects),
-                        subtitle = stringResource(
-                            if (blurEffectsSupported) {
-                                R.string.settings_blur_effects_subtitle
-                            } else {
-                                R.string.settings_blur_effects_unsupported_subtitle
-                            }
-                        ),
-                        checked = blurEffectsActive,
-                        onCheckedChange = { ThemeManager.setBlurEffectsEnabled(context, it) },
-                        enabled = blurEffectsSupported,
-                        showDivider = true
-                    )
-
-                    if (blurEffectsActive) {
-                    SettingsToggleRow(
-                        icon = Icons.Filled.Palette,
-                        title = stringResource(R.string.settings_liquid_glass_translucent),
-                        subtitle = stringResource(R.string.settings_liquid_glass_translucent_subtitle),
-                        checked = liquidGlassTranslucent,
-                        onCheckedChange = { ThemeManager.setLiquidGlassTranslucent(context, it) },
-                        showDivider = true
-                    )
-
-                    SettingsToggleRow(
-                        icon = Icons.Filled.BlurOn,
-                        title = stringResource(R.string.settings_bottom_sheet_blur),
-                        subtitle = stringResource(R.string.settings_bottom_sheet_blur_subtitle),
-                        checked = bottomSheetBlur,
-                        onCheckedChange = { ThemeManager.setBottomSheetBlur(context, it) },
-                        showDivider = false
-                    )
-
+                if (blurEffectsActive) {
                     if (liquidGlassTranslucent) {
                         Text(
                             text = stringResource(R.string.settings_liquid_glass_lens_strength),
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MiuixTheme.textStyles.body1,
                             fontWeight = FontWeight.SemiBold,
-                            color = c.textPrimary,
-                            modifier = Modifier.padding(top = 12.dp)
+                            color = c.textPrimary
                         )
                         Text(
                             text = stringResource(R.string.settings_liquid_glass_lens_strength_subtitle),
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.footnote1,
                             color = c.textSecondary,
                             modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
                         )
@@ -920,19 +878,18 @@ private fun SettingsMainContent(
                                 inactiveTrackColor = c.divider.copy(alpha = if (isDark) 0.16f else 0.06f)
                             )
                         )
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
 
                     Text(
                         text = stringResource(R.string.settings_liquid_glass_blur_strength),
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MiuixTheme.textStyles.body1,
                         fontWeight = FontWeight.SemiBold,
-                        color = c.textPrimary,
-                        modifier = Modifier.padding(top = 12.dp)
+                        color = c.textPrimary
                     )
-
                     Text(
                         text = stringResource(R.string.settings_liquid_glass_blur_strength_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = c.textSecondary,
                         modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
                     )
@@ -946,280 +903,211 @@ private fun SettingsMainContent(
                             inactiveTrackColor = c.divider.copy(alpha = if (isDark) 0.16f else 0.06f)
                         )
                     )
-                    }
-
-                    Text(
-                        text = stringResource(R.string.settings_ui_scale, pendingUiScalePercent.roundToInt()),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = c.textPrimary,
-                        modifier = Modifier.padding(top = 12.dp)
-                    )
-
-                    Text(
-                        text = stringResource(R.string.settings_ui_scale_subtitle),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = c.textSecondary,
-                        modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
-                    )
-                    Slider(
-                        value = pendingUiScalePercent,
-                        onValueChange = { v ->
-                            uiScaleDragging = true
-                            pendingUiScalePercent = v.coerceIn(80f, 120f)
-                        },
-                        onValueChangeFinished = {
-                            uiScaleDragging = false
-                            UiScaleManager.setUiScalePercent(context, pendingUiScalePercent.roundToInt())
-                        },
-                        valueRange = 80f..120f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = accent,
-                            activeTrackColor = accent,
-                            inactiveTrackColor = c.divider.copy(alpha = if (isDark) 0.16f else 0.06f)
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding().coerceAtMost(12.dp)))
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
+
+                Text(
+                    text = uiScaleSummary,
+                    style = MiuixTheme.textStyles.body1,
+                    fontWeight = FontWeight.SemiBold,
+                    color = c.textPrimary
+                )
+                Text(
+                    text = stringResource(R.string.settings_ui_scale_subtitle),
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = c.textSecondary,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 6.dp)
+                )
+                Slider(
+                    value = pendingUiScalePercent,
+                    onValueChange = { value ->
+                        uiScaleDragging = true
+                        pendingUiScalePercent = value.coerceIn(80f, 120f)
+                    },
+                    onValueChangeFinished = {
+                        uiScaleDragging = false
+                        UiScaleManager.setUiScalePercent(context, pendingUiScalePercent.roundToInt())
+                    },
+                    valueRange = 80f..120f,
+                    colors = SliderDefaults.colors(
+                        thumbColor = accent,
+                        activeTrackColor = accent,
+                        inactiveTrackColor = c.divider.copy(alpha = if (isDark) 0.16f else 0.06f)
+                    )
+                )
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = Modifier
-            .fillMaxSize()
-            .background(c.pageBg),
-        contentPadding = contentPaddingWithNavBars(
-            start = pagePadding,
-            end = pagePadding,
-            top = 0.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        item {
-            Column(modifier = Modifier.windowInsetsPadding(WindowInsets.statusBars)) {
+    if (showProxyTrafficFilterSheet) {
+        AppModalBottomSheet(
+            onDismissRequest = { showProxyTrafficFilterSheet = false }
+        ) {
+            val sheetScrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(sheetScrollState)
+                    .padding(horizontal = 18.dp)
+            ) {
                 Text(
-                    text = stringResource(R.string.settings_title),
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.SemiBold
+                    text = stringResource(R.string.settings_filter_chains),
+                    style = MiuixTheme.textStyles.title2,
+                    fontWeight = FontWeight.SemiBold,
+                    color = c.textPrimary
                 )
                 Text(
-                    text = stringResource(R.string.settings_subtitle),
-                    style = MaterialTheme.typography.bodyMedium,
+                    text = stringResource(R.string.settings_filter_chains_subtitle),
+                    style = MiuixTheme.textStyles.body2,
                     color = c.textSecondary,
-                    modifier = Modifier.padding(top = 6.dp)
+                    modifier = Modifier.padding(top = 6.dp, bottom = 16.dp)
                 )
+                SettingsTextFieldRow(
+                    icon = Icons.Filled.Category,
+                    title = stringResource(R.string.settings_filter_chains),
+                    subtitle = stringResource(R.string.settings_filter_chains_subtitle),
+                    value = proxyTrafficFilterText,
+                    placeholder = defaultProxyTrafficFilter,
+                    onValueChange = { proxyTrafficFilterText = it }
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(1.dp, c.divider.copy(alpha = 0.75f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = c.textSecondary),
+                        onClick = { proxyTrafficFilterText = defaultProxyTrafficFilter }
+                    ) {
+                        Text(text = stringResource(R.string.settings_latency_reset))
+                    }
+                    Button(
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MiuixTheme.colorScheme.primary,
+                            contentColor = MiuixTheme.colorScheme.onPrimary
+                        ),
+                        onClick = { showProxyTrafficFilterSheet = false }
+                    ) {
+                        Text(text = stringResource(R.string.action_apply))
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
+    }
 
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.settings_section_appearance),
-                subtitle = stringResource(R.string.settings_section_appearance_subtitle)
+    if (showLatencyTargetsSheet) {
+        AppModalBottomSheet(
+            onDismissRequest = { showLatencyTargetsSheet = false }
+        ) {
+            val sheetScrollState = rememberScrollState()
+
+            fun markDirty() {
+                if (!latencyDirty) latencyDirty = true
+            }
+
+            fun previewTitle(name: String, url: String): String {
+                val resolvedName = name.trim().ifBlank { "-" }
+                val host = runCatching { Uri.parse(url.trim()).host }.getOrNull().orEmpty().ifBlank { url.trim() }
+                return if (host.isBlank()) resolvedName else "$resolvedName  ·  $host"
+            }
+
+            @Composable
+            fun TargetCard(
+                index: Int,
+                name: String,
+                url: String,
+                expanded: Boolean,
+                onToggle: () -> Unit,
+                onNameChange: (String) -> Unit,
+                onUrlChange: (String) -> Unit
             ) {
-                ToolsRowIcon(
-                    icon = Icons.Filled.Palette,
-                    title = stringResource(R.string.settings_theme_mode),
-                    subtitle = when (currentThemeMode) {
-                        ThemeMode.LIGHT -> stringResource(R.string.settings_theme_light)
-                        ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
-                        ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_follow_system)
-                    },
-                    showDivider = true,
-                    onClick = { showThemeDialog = true }
-                )
-
-                ToolsRowIcon(
-                    icon = Icons.Filled.Translate,
-                    title = stringResource(R.string.settings_language),
-                    subtitle = when (currentLanguage) {
-                        AppLanguage.SYSTEM -> stringResource(R.string.settings_language_follow_system)
-                        AppLanguage.ENGLISH -> stringResource(R.string.settings_language_english)
-                        AppLanguage.CHINESE -> stringResource(R.string.settings_language_chinese)
-                    },
-                    showDivider = true,
-                    onClick = { showLanguageDialog = true }
-                )
-
-                ToolsRowIcon(
-                    icon = Icons.Filled.PhoneAndroid,
-                    title = stringResource(R.string.settings_system_bars),
-                    subtitle = stringResource(
-                        R.string.settings_system_bars_subtitle,
-                        if (systemBarSettings.statusBar.name == "TRANSPARENT") stringResource(R.string.settings_system_bars_transparent) else stringResource(R.string.settings_system_bars_opaque),
-                        stringResource(R.string.settings_system_bars_status),
-                        if (systemBarSettings.navigationBar.name == "TRANSPARENT") stringResource(R.string.settings_system_bars_transparent) else stringResource(R.string.settings_system_bars_opaque),
-                        stringResource(R.string.settings_system_bars_navigation)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedRectangle(18.dp)),
+                    cornerRadius = 18.dp,
+                    colors = CardDefaults.defaultColors(
+                        color = MiuixTheme.colorScheme.surfaceVariant
                     ),
-                    showDivider = true,
-                    onClick = { showSystemBarDialog = true }
-                )
-
-                ToolsRowIcon(
-                    icon = Icons.Filled.Tune,
-                    title = stringResource(R.string.settings_appearance_more),
-                    subtitle = stringResource(R.string.settings_appearance_more_subtitle),
-                    showDivider = false,
-                    onClick = { showAppearanceMoreSheet = true }
-                )
-            }
-        }
-
-        if (BuildConfig.FLAVOR != "bfr") {
-            item {
-                ToolsSectionCard(
-                    title = stringResource(R.string.settings_section_service),
-                    subtitle = stringResource(R.string.settings_section_service_subtitle)
+                    onClick = onToggle
                 ) {
-                    SettingsToggleRow(
-                        icon = Icons.Filled.Autorenew,
-                        title = stringResource(R.string.settings_auto_start),
-                        subtitle = stringResource(R.string.settings_auto_start_subtitle),
-                        checked = autoStart,
-                        onCheckedChange = { enabled ->
-                            autoStart = enabled
-                            scope.launch {
-                                runCatching { BoxApi.updateBooleanSetting("boot_auto_start", enabled) }
-                            }
-                        }
-                    )
-                    SettingsToggleRow(
-                        icon = Icons.Filled.Download,
-                        title = stringResource(R.string.settings_accelerated_download),
-                        subtitle = stringResource(R.string.settings_accelerated_download_subtitle),
-                        checked = acceleratedDownload,
-                        onCheckedChange = { enabled ->
-                            acceleratedDownload = enabled
-                            scope.launch {
-                                runCatching { BoxApi.updateBooleanSetting("use_ghproxy", enabled) }
-                            }
-                        },
-                        showDivider = false
-                    )
-                }
-            }
-        }
-
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.settings_section_subscription),
-                subtitle = stringResource(R.string.settings_section_subscription_subtitle)
-            ) {
-                SettingsToggleRow(
-                    icon = Icons.Filled.Analytics,
-                    title = stringResource(R.string.settings_use_clash_api),
-                    subtitle = if (useClashApi) stringResource(R.string.settings_providers_mode) else stringResource(R.string.settings_url_mode),
-                    checked = useClashApi,
-                    onCheckedChange = { useClashApi = it },
-                    showDivider = false
-                )
-            }
-        }
-
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.settings_section_net_speed),
-                subtitle = stringResource(R.string.settings_section_subscription_subtitle)
-            ) {
-                SettingsToggleRow(
-                    icon = Icons.Filled.Analytics,
-                    title = stringResource(R.string.settings_use_clash_api),
-                    subtitle = if (useClashApiForNetSpeed) stringResource(R.string.settings_core_api_mode) else stringResource(R.string.settings_system_mode),
-                    checked = useClashApiForNetSpeed,
-                    onCheckedChange = { useClashApiForNetSpeed = it },
-                    showDivider = useClashApiForNetSpeed
-                )
-
-                if (useClashApiForNetSpeed) {
-                    SettingsTextFieldRow(
-                        icon = Icons.Filled.Category,
-                        title = stringResource(R.string.settings_filter_chains),
-                        subtitle = stringResource(R.string.settings_filter_chains_subtitle),
-                        value = proxyTrafficFilterText,
-                        placeholder = defaultProxyTrafficFilter,
-                        onValueChange = { proxyTrafficFilterText = it }
-                    )
-                }
-            }
-        }
-
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.settings_latency_targets_title),
-                subtitle = stringResource(R.string.settings_latency_targets_subtitle)
-            ) {
-                fun markDirty() {
-                    if (!latencyDirty) latencyDirty = true
-                }
-
-                fun previewTitle(name: String, url: String): String {
-                    val n = name.trim().ifBlank { "-" }
-                    val host = runCatching { Uri.parse(url.trim()).host }.getOrNull().orEmpty().ifBlank { url.trim() }
-                    return if (host.isBlank()) n else "$n  ·  $host"
-                }
-
-                @Composable
-                fun TargetCard(
-                    index: Int,
-                    name: String,
-                    url: String,
-                    expanded: Boolean,
-                    onToggle: () -> Unit,
-                    onNameChange: (String) -> Unit,
-                    onUrlChange: (String) -> Unit
-                ) {
-                    Card(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedRectangle(16.dp))
-                            .clickable(onClick = onToggle),
-                        colors = CardDefaults.cardColors(containerColor = c.cardAlt)
+                            .padding(14.dp)
                     ) {
-                        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
-                            Text(
-                                text = "#${index}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = c.textSecondary
-                            )
-                            Text(
-                                text = previewTitle(name, url),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.SemiBold,
-                                color = c.textPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
+                        Text(
+                            text = "#$index",
+                            style = MiuixTheme.textStyles.footnote1,
+                            color = c.textSecondary
+                        )
+                        Text(
+                            text = previewTitle(name, url),
+                            style = MiuixTheme.textStyles.body1,
+                            fontWeight = FontWeight.SemiBold,
+                            color = c.textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
 
-                            if (expanded) {
-                                Spacer(modifier = Modifier.height(10.dp))
-                                SettingsTextFieldRow(
-                                    icon = Icons.Filled.Tune,
-                                    title = stringResource(R.string.settings_latency_target_name),
-                                    subtitle = "#${index}",
-                                    value = name,
-                                    placeholder = "",
-                                    onValueChange = { v -> markDirty(); onNameChange(v) }
-                                )
-                                SettingsTextFieldRow(
-                                    icon = Icons.Filled.Link,
-                                    title = stringResource(R.string.settings_latency_target_url),
-                                    subtitle = "#${index}",
-                                    value = url,
-                                    placeholder = "https://",
-                                    onValueChange = { v -> markDirty(); onUrlChange(v) }
-                                )
-                            }
+                        if (expanded) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            SettingsTextFieldRow(
+                                icon = Icons.Filled.Tune,
+                                title = stringResource(R.string.settings_latency_target_name),
+                                subtitle = "#$index",
+                                value = name,
+                                placeholder = "",
+                                onValueChange = { value ->
+                                    markDirty()
+                                    onNameChange(value)
+                                }
+                            )
+                            SettingsTextFieldRow(
+                                icon = Icons.Filled.Link,
+                                title = stringResource(R.string.settings_latency_target_url),
+                                subtitle = "#$index",
+                                value = url,
+                                placeholder = "https://",
+                                onValueChange = { value ->
+                                    markDirty()
+                                    onUrlChange(value)
+                                }
+                            )
                         }
                     }
                 }
+            }
 
-                var expand1 by rememberSaveable { mutableStateOf(false) }
-                var expand2 by rememberSaveable { mutableStateOf(false) }
-                var expand3 by rememberSaveable { mutableStateOf(false) }
+            var expand1 by rememberSaveable { mutableStateOf(false) }
+            var expand2 by rememberSaveable { mutableStateOf(false) }
+            var expand3 by rememberSaveable { mutableStateOf(false) }
 
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(sheetScrollState)
+                    .padding(horizontal = 18.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.settings_latency_targets_title),
+                    style = MiuixTheme.textStyles.title2,
+                    fontWeight = FontWeight.SemiBold,
+                    color = c.textPrimary
+                )
+                Text(
+                    text = stringResource(R.string.settings_latency_targets_subtitle),
+                    style = MiuixTheme.textStyles.body2,
+                    color = c.textSecondary,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 16.dp)
+                )
                 TargetCard(
                     index = 1,
                     name = latencyName1,
@@ -1249,9 +1137,7 @@ private fun SettingsMainContent(
                     onNameChange = { latencyName3 = it },
                     onUrlChange = { latencyUrl3 = it }
                 )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
+                Spacer(modifier = Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -1265,20 +1151,17 @@ private fun SettingsMainContent(
                             LatencyTargetsManager.resetToDefaults(context)
                             latencyDirty = false
                             LatencyTargetsManager.targets.value.let { list ->
-                                val t1 = list.getOrNull(0)
-                                val t2 = list.getOrNull(1)
-                                val t3 = list.getOrNull(2)
-                                if (t1 != null) {
-                                    latencyName1 = t1.name
-                                    latencyUrl1 = t1.url
+                                list.getOrNull(0)?.let {
+                                    latencyName1 = it.name
+                                    latencyUrl1 = it.url
                                 }
-                                if (t2 != null) {
-                                    latencyName2 = t2.name
-                                    latencyUrl2 = t2.url
+                                list.getOrNull(1)?.let {
+                                    latencyName2 = it.name
+                                    latencyUrl2 = it.url
                                 }
-                                if (t3 != null) {
-                                    latencyName3 = t3.name
-                                    latencyUrl3 = t3.url
+                                list.getOrNull(2)?.let {
+                                    latencyName3 = it.name
+                                    latencyUrl3 = it.url
                                 }
                             }
                             scope.launch { HomeRepository.refreshLatencyNow() }
@@ -1286,12 +1169,11 @@ private fun SettingsMainContent(
                     ) {
                         Text(text = stringResource(R.string.settings_latency_reset))
                     }
-
                     Button(
                         modifier = Modifier.weight(1f),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
+                            containerColor = MiuixTheme.colorScheme.primary,
+                            contentColor = MiuixTheme.colorScheme.onPrimary
                         ),
                         onClick = {
                             LatencyTargetsManager.setTargets(
@@ -1302,103 +1184,442 @@ private fun SettingsMainContent(
                             )
                             latencyDirty = false
                             LatencyTargetsManager.targets.value.let { list ->
-                                val t1 = list.getOrNull(0)
-                                val t2 = list.getOrNull(1)
-                                val t3 = list.getOrNull(2)
-                                if (t1 != null) {
-                                    latencyName1 = t1.name
-                                    latencyUrl1 = t1.url
+                                list.getOrNull(0)?.let {
+                                    latencyName1 = it.name
+                                    latencyUrl1 = it.url
                                 }
-                                if (t2 != null) {
-                                    latencyName2 = t2.name
-                                    latencyUrl2 = t2.url
+                                list.getOrNull(1)?.let {
+                                    latencyName2 = it.name
+                                    latencyUrl2 = it.url
                                 }
-                                if (t3 != null) {
-                                    latencyName3 = t3.name
-                                    latencyUrl3 = t3.url
+                                list.getOrNull(2)?.let {
+                                    latencyName3 = it.name
+                                    latencyUrl3 = it.url
                                 }
                             }
                             scope.launch { HomeRepository.refreshLatencyNow() }
+                            showLatencyTargetsSheet = false
                         }
                     ) {
                         Text(text = stringResource(R.string.settings_latency_save))
                     }
                 }
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
+    }
 
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.settings_section_misc),
-                subtitle = stringResource(R.string.settings_section_misc_subtitle)
-            ) {
-                SettingsToggleRow(
-                    icon = Icons.Filled.Dashboard,
-                    title = stringResource(R.string.settings_open_panel_on_launch),
-                    subtitle = stringResource(R.string.settings_open_panel_on_launch_subtitle),
-                    checked = openPanelOnLaunch,
-                    onCheckedChange = { openPanelOnLaunch = it }
+    Scaffold(
+        topBar = {
+            SmallTopAppBar(
+                title = stringResource(R.string.settings_title),
+                subtitle = stringResource(R.string.settings_subtitle)
+            )
+        }
+    ) { innerPadding ->
+        LazyColumn(
+            state = listState,
+            modifier = Modifier
+                .fillMaxSize()
+                ,
+            contentPadding = contentPaddingWithNavBars(
+                top = innerPadding.calculateTopPadding()
+            ),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            item {
+                SettingsPreferenceSection(
+                    title = stringResource(R.string.settings_section_appearance)
+                ) {
+                WindowDropdownPreference(
+                    items = themeEntries,
+                    selectedIndex = when (currentThemeMode) {
+                        ThemeMode.SYSTEM -> 0
+                        ThemeMode.LIGHT -> 1
+                        ThemeMode.DARK -> 2
+                    },
+                    title = stringResource(R.string.settings_theme_mode),
+
+                    onSelectedIndexChange = { index ->
+                        val mode = when (index) {
+                            1 -> ThemeMode.LIGHT
+                            2 -> ThemeMode.DARK
+                            else -> ThemeMode.SYSTEM
+                        }
+                        ThemeManager.setThemeMode(context, mode)
+                    }
                 )
-                SettingsToggleRow(
-                    icon = Icons.Filled.Notifications,
-                    title = stringResource(R.string.settings_notifications),
-                    subtitle = stringResource(R.string.settings_notifications_subtitle),
+                SettingsPreferenceDivider()
+                WindowDropdownPreference(
+                    items = languageEntries,
+                    selectedIndex = when (currentLanguage) {
+                        AppLanguage.SYSTEM -> 0
+                        AppLanguage.ENGLISH -> 1
+                        AppLanguage.CHINESE -> 2
+                    },
+                    title = stringResource(R.string.settings_language),
+
+                    onSelectedIndexChange = { index ->
+                        val language = when (index) {
+                            1 -> AppLanguage.ENGLISH
+                            2 -> AppLanguage.CHINESE
+                            else -> AppLanguage.SYSTEM
+                        }
+                        LanguageManager.setLanguage(context, language)
+                    }
+                )
+                SettingsPreferenceDivider()
+                WindowDropdownPreference(
+                    items = systemBarEntries,
+                    selectedIndex = if (systemBarSettings.statusBar == com.box.app.utils.SystemBarMode.TRANSPARENT) 0 else 1,
+                    title = stringResource(R.string.settings_system_bars_opaque_status_title),
+
+                    summary = stringResource(R.string.settings_system_bars_opaque_subtitle),
+                    onSelectedIndexChange = { index ->
+                        ThemeManager.setSystemBarSettings(
+                            context,
+                            systemBarSettings.copy(
+                                statusBar = if (index == 0) com.box.app.utils.SystemBarMode.TRANSPARENT else com.box.app.utils.SystemBarMode.OPAQUE
+                            )
+                        )
+                    }
+                )
+                SettingsPreferenceDivider()
+                WindowDropdownPreference(
+                    items = systemBarEntries,
+                    selectedIndex = if (systemBarSettings.navigationBar == com.box.app.utils.SystemBarMode.TRANSPARENT) 0 else 1,
+                    title = stringResource(R.string.settings_system_bars_opaque_navigation_title),
+
+                    summary = stringResource(R.string.settings_system_bars_opaque_subtitle),
+                    onSelectedIndexChange = { index ->
+                        ThemeManager.setSystemBarSettings(
+                            context,
+                            systemBarSettings.copy(
+                                navigationBar = if (index == 0) com.box.app.utils.SystemBarMode.TRANSPARENT else com.box.app.utils.SystemBarMode.OPAQUE
+                            )
+                        )
+                    }
+                )
+                SettingsPreferenceDivider()
+                SwitchPreference(
+                    checked = blurEffectsActive,
+                    onCheckedChange = { ThemeManager.setBlurEffectsEnabled(context, it) },
+                    title = stringResource(R.string.settings_blur_effects),
+                    summary = blurSummary,
+                    enabled = blurEffectsSupported,
+                )
+                SettingsPreferenceDivider()
+                SwitchPreference(
+                    checked = liquidGlassNavBarEnabled,
+                    onCheckedChange = { ThemeManager.setLiquidGlassNavBar(context, it) },
+                    title = stringResource(R.string.settings_liquid_glass_nav_bar),
+                    summary = stringResource(R.string.settings_liquid_glass_nav_bar_subtitle),
+                    enabled = blurEffectsSupported,
+                )
+                SettingsPreferenceDivider()
+                run {
+                    val mapleFontEnabled by ThemeManager.mapleFontLogs.collectAsState()
+                    val fontState by MapleFontManager.state.collectAsState()
+                    val mapleSummary = when {
+                        fontState is MapleFontManager.FontState.Downloading -> stringResource(R.string.settings_maple_font_logs_downloading)
+                        fontState is MapleFontManager.FontState.Error -> stringResource(R.string.settings_maple_font_logs_failed)
+                        mapleFontEnabled && fontState is MapleFontManager.FontState.Ready -> stringResource(R.string.settings_maple_font_logs_ready)
+                        else -> stringResource(R.string.settings_maple_font_logs_subtitle)
+                    }
+                    SwitchPreference(
+                        checked = mapleFontEnabled,
+                        onCheckedChange = { enabled ->
+                            ThemeManager.setMapleFontLogs(context, enabled)
+                            if (enabled && !MapleFontManager.isCached(context)) {
+                                scope.launch { MapleFontManager.downloadAndInstall(context) }
+                            } else if (enabled) {
+                                MapleFontManager.loadCachedFont(context)
+                            }
+                        },
+                        title = stringResource(R.string.settings_maple_font_logs),
+                        summary = mapleSummary,
+                        enabled = fontState !is MapleFontManager.FontState.Downloading
+                    )
+                }
+                SettingsPreferenceDivider()
+                run {
+                    val hyperXNavEnabled by ThemeManager.hyperXNavTransitions.collectAsState()
+                    SwitchPreference(
+                        checked = hyperXNavEnabled,
+                        onCheckedChange = { ThemeManager.setHyperXNavTransitions(context, it) },
+                        title = stringResource(R.string.settings_hyperx_nav_transitions),
+                        summary = stringResource(R.string.settings_hyperx_nav_transitions_subtitle)
+                    )
+                }
+                SettingsPreferenceDivider()
+                ArrowPreference(
+                    title = stringResource(R.string.settings_appearance_more),
+                    summary = visualTuneSummary,
+                    onClick = { showAppearanceTuningSheet = true }
+                )
+                }
+            }
+
+            if (BuildConfig.FLAVOR != "bfr") {
+                item {
+                    SettingsPreferenceSection(
+                        title = stringResource(R.string.settings_section_service)
+                    ) {
+                        SwitchPreference(
+                            checked = autoStart,
+                            onCheckedChange = { enabled ->
+                                autoStart = enabled
+                                scope.launch {
+                                    runCatching { BoxApi.updateBooleanSetting("boot_auto_start", enabled) }
+                                }
+                            },
+                            title = stringResource(R.string.settings_auto_start),
+                            summary = stringResource(R.string.settings_auto_start_subtitle),
+                        )
+                        SettingsPreferenceDivider()
+                        SwitchPreference(
+                            checked = acceleratedDownload,
+                            onCheckedChange = { enabled ->
+                                acceleratedDownload = enabled
+                                scope.launch {
+                                    runCatching { BoxApi.updateBooleanSetting("use_ghproxy", enabled) }
+                                }
+                            },
+                            title = stringResource(R.string.settings_accelerated_download),
+                            summary = stringResource(R.string.settings_accelerated_download_subtitle),
+                        )
+                    }
+                }
+            }
+
+            item {
+                SettingsPreferenceSection(
+                    title = stringResource(R.string.settings_section_subscription)
+                ) {
+                SwitchPreference(
+                    checked = useClashApi,
+                    onCheckedChange = { useClashApi = it },
+                    title = stringResource(R.string.settings_use_clash_api),
+                    summary = if (useClashApi) stringResource(R.string.settings_providers_mode) else stringResource(R.string.settings_url_mode),
+                )
+                }
+            }
+
+            item {
+                SettingsPreferenceSection(
+                    title = stringResource(R.string.settings_section_net_speed)
+                ) {
+                SwitchPreference(
+                    checked = useClashApiForNetSpeed,
+                    onCheckedChange = { useClashApiForNetSpeed = it },
+                    title = stringResource(R.string.settings_use_clash_api),
+                    summary = if (useClashApiForNetSpeed) stringResource(R.string.settings_core_api_mode) else stringResource(R.string.settings_system_mode),
+                )
+
+                if (useClashApiForNetSpeed) {
+                    SettingsPreferenceDivider()
+                    ArrowPreference(
+                        title = stringResource(R.string.settings_filter_chains),
+                        summary = proxyTrafficFilterText.ifBlank { defaultProxyTrafficFilter },
+                        onClick = { showProxyTrafficFilterSheet = true }
+                    )
+                }
+                }
+            }
+
+            item {
+                SettingsPreferenceSection(
+                    title = stringResource(R.string.settings_latency_targets_title)
+                ) {
+                ArrowPreference(
+                    title = stringResource(R.string.settings_latency_targets_title),
+                    summary = latencyPreview,
+                    onClick = { showLatencyTargetsSheet = true }
+                )
+                }
+            }
+
+            item {
+                SettingsPreferenceSection(
+                    title = stringResource(R.string.settings_section_misc)
+                ) {
+                SwitchPreference(
+                    checked = openPanelOnLaunch,
+                    onCheckedChange = { openPanelOnLaunch = it },
+                    title = stringResource(R.string.settings_open_panel_on_launch),
+                    summary = stringResource(R.string.settings_open_panel_on_launch_subtitle),
+                )
+                SettingsPreferenceDivider()
+                SwitchPreference(
                     checked = enableNotifications,
                     onCheckedChange = { enableNotifications = it },
-                    showDivider = false
+                    title = stringResource(R.string.settings_notifications),
+                    summary = stringResource(R.string.settings_notifications_subtitle),
                 )
-                ToolsRowIcon(
-                    icon = Icons.Filled.Storage,
+                SettingsPreferenceDivider()
+                ArrowPreference(
                     title = stringResource(R.string.settings_backup_restore_title),
-                    subtitle = stringResource(R.string.settings_backup_restore_subtitle),
-                    showDivider = false,
+                    summary = stringResource(R.string.settings_backup_restore_subtitle),
                     onClick = { showBackupRestoreDialog = true }
                 )
+                }
             }
-        }
 
-        item {
-            ToolsSectionCard(
-                title = stringResource(R.string.settings_section_about),
-                subtitle = stringResource(R.string.settings_section_about_subtitle)
-            ) {
-                ToolsRowIcon(
-                    icon = Icons.Filled.Info,
+            item {
+                SettingsPreferenceSection(
+                    title = stringResource(R.string.settings_section_about)
+                ) {
+                ArrowPreference(
                     title = stringResource(R.string.settings_version),
-                    subtitle = "v$appVersionText",
-                    badge = {
+                    summary = "v$appVersionText",
+                    endActions = {
                         VersionUpdateBadge(
                             isChecking = updateCheckStatus.isChecking,
                             appHasUpdate = updateCheckStatus.appHasUpdate,
                             moduleHasUpdate = updateCheckStatus.moduleHasUpdate,
                             onAppClick = {
                                 scope.launch {
-                                    openUpdateSheetFor(UpdateTarget.APP, closeAboutDialog = false)
+                                    openUpdateSheetFor(UpdateTarget.APP)
                                 }
                             },
                             onModuleClick = {
                                 scope.launch {
-                                    openUpdateSheetFor(UpdateTarget.MODULE, closeAboutDialog = false)
+                                    openUpdateSheetFor(UpdateTarget.MODULE)
                                 }
                             }
                         )
                     },
-                    showDivider = true,
-                    onClick = { showAboutDialog = true }
+                    onClick = onOpenAbout
                 )
-
-                ToolsRowIcon(
-                    icon = Icons.Filled.Settings,
+                SettingsPreferenceDivider()
+                ArrowPreference(
                     title = stringResource(R.string.settings_open_source_licenses),
-                    subtitle = stringResource(R.string.settings_open_source_licenses_subtitle),
-                    showDivider = false,
+                    summary = stringResource(R.string.settings_open_source_licenses_subtitle),
                     onClick = { onOpenOpenSourceLicenses() }
                 )
+                }
             }
-        }
 
-        item { Spacer(modifier = Modifier.height(8.dp)) }
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+        }
     }
+}
+
+@Composable
+private fun SettingsHeroCard(
+    appIconPainter: Painter?,
+    appVersionText: String,
+    themeLabel: String,
+    languageLabel: String,
+    isChecking: Boolean,
+    appHasUpdate: Boolean,
+    moduleHasUpdate: Boolean,
+    onOpenAbout: () -> Unit,
+    onAppClick: (() -> Unit)? = null,
+    onModuleClick: (() -> Unit)? = null
+) {
+    val c = appColors()
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        onClick = onOpenAbout
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (appIconPainter != null) {
+                Image(
+                    painter = appIconPainter,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedRectangle(14.dp))
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedRectangle(14.dp))
+                        .background(MiuixTheme.colorScheme.surfaceContainerHigh),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Settings,
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.onSurfaceSecondary
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = 12.dp)
+            ) {
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = stringResource(R.string.app_name),
+                    style = MiuixTheme.textStyles.title4,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MiuixTheme.colorScheme.onSurface
+                )
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = "v$appVersionText",
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceSecondary
+                )
+                top.yukonga.miuix.kmp.basic.Text(
+                    text = "$themeLabel  ·  $languageLabel",
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = MiuixTheme.colorScheme.onSurfaceSecondary
+                )
+            }
+
+            VersionUpdateBadge(
+                isChecking = isChecking,
+                appHasUpdate = appHasUpdate,
+                moduleHasUpdate = moduleHasUpdate,
+                onAppClick = onAppClick,
+                onModuleClick = onModuleClick
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsPreferenceSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        SmallTitle(text = title)
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp)
+                .padding(bottom = 6.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                content = content
+            )
+        }
+    }
+}
+
+@Composable
+private fun SettingsPreferenceDivider() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .height(0.5.dp)
+            .background(MiuixTheme.colorScheme.dividerLine.copy(alpha = 0.08f))
+    )
 }
 
 @Composable
@@ -1411,14 +1632,13 @@ private fun VersionUpdateBadge(
 ) {
     if (!isChecking && !appHasUpdate && !moduleHasUpdate) return
 
-    val c = appColors()
-    val isDark = ThemeManager.shouldUseDarkTheme()
-    val chipBg = if (isDark) c.cardAlt.copy(alpha = 0.92f) else Color.White
-    val chipBorder = c.divider.copy(alpha = if (isDark) 0.9f else 0.78f)
-    val appTint = if (isDark) Color(0xFF7DD3FC) else Color(0xFF0369A1)
-    val moduleTint = if (isDark) Color(0xFFA7F3D0) else Color(0xFF166534)
-    val updateDot = if (isDark) Color(0xFFFF6478) else Color(0xFFE11D48)
-    val labelColor = c.textPrimary
+    val scheme = MiuixTheme.colorScheme
+    val chipBg = scheme.surfaceContainerHighest
+    val chipBorder = scheme.dividerLine
+    val appTint = scheme.primary
+    val moduleTint = scheme.onSecondaryContainer
+    val updateDot = scheme.error
+    val labelColor = scheme.onSurface
 
     Row(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1428,7 +1648,7 @@ private fun VersionUpdateBadge(
             CheckingUpdateBadge(
                 containerColor = chipBg,
                 borderColor = chipBorder,
-                indicatorColor = if (isDark) Color(0xFFE2E8F0) else Color(0xFF475569)
+                indicatorColor = scheme.onSurfaceSecondary
             )
         } else {
             if (appHasUpdate) {
@@ -1491,7 +1711,7 @@ private fun CheckingUpdateBadge(
             )
             Text(
                 text = stringResource(R.string.settings_update_status_checking),
-                style = MaterialTheme.typography.labelSmall,
+                style = MiuixTheme.textStyles.footnote2,
                 fontWeight = FontWeight.SemiBold,
                 color = c.textSecondary
             )
@@ -1558,7 +1778,7 @@ private fun UpdateTypeBadge(
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
+                style = MiuixTheme.textStyles.footnote2,
                 fontWeight = FontWeight.SemiBold,
                 color = labelColor
             )
@@ -1601,13 +1821,13 @@ private fun SettingsTextFieldRow(
         Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.body1,
                 fontWeight = FontWeight.SemiBold,
                 color = c.textPrimary
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.footnote1,
                 color = c.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -1622,10 +1842,10 @@ private fun SettingsTextFieldRow(
             .fillMaxWidth()
             .padding(horizontal = 6.dp),
         placeholder = {
-            Text(text = placeholder, style = MaterialTheme.typography.bodyMedium)
+            Text(text = placeholder, style = MiuixTheme.textStyles.body2)
         },
         singleLine = true,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(color = c.textPrimary),
+        textStyle = MiuixTheme.textStyles.body2.copy(color = c.textPrimary),
         shape = RoundedRectangle(14.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = c.divider,
@@ -1642,10 +1862,12 @@ private enum class BackupRestoreMode { BACKUP, RESTORE }
 private enum class BackupRestoreScope { MODULES, APPS, BOTH }
 
 @Composable
-private fun BackupRestoreDialog(
+private fun BackupRestoreSheet(
+    show: Boolean,
     onDismiss: () -> Unit
 ) {
-    val c = appColors()
+    if (!show) return
+
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
@@ -1970,26 +2192,28 @@ private fun BackupRestoreDialog(
         }
     }
 
+    // 恢复确认弹窗
     if (showRestoreConfirm) {
-        AlertDialog(
+        OverlayDialog(
+            show = true,
             onDismissRequest = { if (!working) showRestoreConfirm = false },
-            containerColor = c.card,
-            titleContentColor = c.textPrimary,
-            textContentColor = c.textSecondary,
-            title = { Text(text = stringResource(R.string.settings_backup_restore_restore)) },
-            text = {
-                Text(
-                    text = stringResource(
-                        R.string.settings_backup_restore_confirm_body,
-                        restoreScopeLabel(restoreScope)
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = c.textSecondary
+            title = stringResource(R.string.settings_backup_restore_restore),
+            summary = stringResource(R.string.settings_backup_restore_confirm_body, restoreScopeLabel(restoreScope)),
+            backgroundColor = MiuixTheme.colorScheme.surfaceContainer,
+            titleColor = MiuixTheme.colorScheme.onSurface,
+            summaryColor = MiuixTheme.colorScheme.onSurfaceSecondary
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End
+            ) {
+                top.yukonga.miuix.kmp.basic.TextButton(
+                    text = stringResource(R.string.action_cancel),
+                    onClick = { showRestoreConfirm = false },
+                    enabled = !working
                 )
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = !working,
+                top.yukonga.miuix.kmp.basic.TextButton(
+                    text = stringResource(R.string.settings_backup_restore_confirm_continue),
                     onClick = {
                         val u = pickedUri ?: return@TextButton
                         showRestoreConfirm = false
@@ -2004,280 +2228,208 @@ private fun BackupRestoreDialog(
                             }
                             working = false
                         }
-                    }
-                ) {
-                    Text(text = stringResource(R.string.settings_backup_restore_confirm_continue))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    enabled = !working,
-                    onClick = { showRestoreConfirm = false }
-                ) {
-                    Text(text = stringResource(R.string.action_cancel), color = c.textPrimary)
-                }
-            }
-        )
-    }
-
-    AlertDialog(
-        onDismissRequest = { if (!working) onDismiss() },
-        containerColor = c.card,
-        titleContentColor = c.textPrimary,
-        textContentColor = c.textSecondary,
-        title = { Text(text = stringResource(R.string.settings_backup_restore_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    @Composable
-                    fun tab(label: String, selected: Boolean, onClick: () -> Unit) {
-                        Box(
-                            modifier = Modifier
-                                .clip(Capsule())
-                                .background(if (selected) c.cardAlt else Color.Transparent)
-                                .clickable(
-                                    enabled = !working,
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClick = onClick
-                                )
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.labelLarge,
-                                color = c.textPrimary
-                            )
-                        }
-                    }
-
-                    tab(
-                        label = stringResource(R.string.settings_backup_restore_tab_backup),
-                        selected = mode == BackupRestoreMode.BACKUP,
-                        onClick = { mode = BackupRestoreMode.BACKUP }
-                    )
-                    tab(
-                        label = stringResource(R.string.settings_backup_restore_tab_restore),
-                        selected = mode == BackupRestoreMode.RESTORE,
-                        onClick = { mode = BackupRestoreMode.RESTORE }
-                    )
-                }
-
-                if (mode == BackupRestoreMode.BACKUP) {
-                    Text(
-                        text = stringResource(R.string.settings_backup_restore_scope_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = c.textPrimary
-                    )
-
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        @Composable
-                        fun row(label: String, selected: Boolean, onClick: () -> Unit) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedRectangle(12.dp))
-                                    .background(c.cardAlt.copy(alpha = if (selected) 0.9f else 0.6f))
-                                    .clickable(
-                                        enabled = !working,
-                                        interactionSource = remember { MutableInteractionSource() },
-                                        indication = null,
-                                        onClick = onClick
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = label,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = c.textPrimary,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Text(
-                                    text = if (selected) "✓" else "",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = c.textPrimary
-                                )
-                            }
-                        }
-
-                        row(
-                            label = stringResource(R.string.settings_backup_restore_scope_modules),
-                            selected = backupScope == BackupRestoreScope.MODULES,
-                            onClick = { backupScope = BackupRestoreScope.MODULES }
-                        )
-                        row(
-                            label = stringResource(R.string.settings_backup_restore_scope_apps),
-                            selected = backupScope == BackupRestoreScope.APPS,
-                            onClick = { backupScope = BackupRestoreScope.APPS }
-                        )
-                        row(
-                            label = stringResource(R.string.settings_backup_restore_scope_both),
-                            selected = backupScope == BackupRestoreScope.BOTH,
-                            onClick = { backupScope = BackupRestoreScope.BOTH }
-                        )
-                    }
-
-                    if (lastExportedName != null) {
-                        Text(
-                            text = stringResource(R.string.settings_backup_restore_exported, lastExportedName!!),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = c.textSecondary
-                        )
-                    }
-                } else {
-                    Text(
-                        text = stringResource(R.string.settings_backup_restore_file_title),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = c.textPrimary
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedRectangle(12.dp))
-                            .background(c.cardAlt)
-                            .clickable(
-                                enabled = !working,
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = { picker.launch(arrayOf("application/zip")) }
-                            )
-                            .padding(horizontal = 12.dp, vertical = 12.dp)
-                    ) {
-                        Text(
-                            text = pickedName ?: stringResource(R.string.settings_backup_restore_file_pick),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = c.textPrimary
-                        )
-                    }
-
-                    if (pickedUri != null) {
-                        val detectedLabel = when {
-                            detectedHasModules && detectedHasApps -> stringResource(R.string.settings_backup_restore_detect_both)
-                            detectedHasModules -> stringResource(R.string.settings_backup_restore_detect_modules)
-                            detectedHasApps -> stringResource(R.string.settings_backup_restore_detect_apps)
-                            else -> stringResource(R.string.settings_backup_restore_detect_unknown)
-                        }
-                        Text(
-                            text = stringResource(R.string.settings_backup_restore_detected, detectedLabel),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = c.textSecondary
-                        )
-
-                        Text(
-                            text = stringResource(R.string.settings_backup_restore_scope_title),
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = c.textPrimary
-                        )
-
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            @Composable
-                            fun row(label: String, selected: Boolean, onClick: () -> Unit) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedRectangle(12.dp))
-                                        .background(c.cardAlt.copy(alpha = if (selected) 0.9f else 0.6f))
-                                        .clickable(
-                                            enabled = !working,
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                            onClick = onClick
-                                        )
-                                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = c.textPrimary,
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Text(
-                                        text = if (selected) "✓" else "",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = c.textPrimary
-                                    )
-                                }
-                            }
-
-                            row(
-                                label = stringResource(R.string.settings_backup_restore_scope_modules_only),
-                                selected = restoreScope == BackupRestoreScope.MODULES,
-                                onClick = { restoreScope = BackupRestoreScope.MODULES }
-                            )
-                            row(
-                                label = stringResource(R.string.settings_backup_restore_scope_apps_only),
-                                selected = restoreScope == BackupRestoreScope.APPS,
-                                onClick = { restoreScope = BackupRestoreScope.APPS }
-                            )
-                            row(
-                                label = stringResource(R.string.settings_backup_restore_scope_both),
-                                selected = restoreScope == BackupRestoreScope.BOTH,
-                                onClick = { restoreScope = BackupRestoreScope.BOTH }
-                            )
-                        }
-                    }
-                }
-
-                if (status != null) {
-                    Text(
-                        text = status!!,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = c.textSecondary
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            val label = if (mode == BackupRestoreMode.BACKUP) {
-                stringResource(R.string.settings_backup_restore_export)
-            } else {
-                stringResource(R.string.settings_backup_restore_restore)
-            }
-            TextButton(
-                enabled = !working && (mode == BackupRestoreMode.BACKUP || pickedUri != null),
-                onClick = {
-                    if (working) return@TextButton
-                    if (mode == BackupRestoreMode.RESTORE) {
-                        showRestoreConfirm = true
-                        return@TextButton
-                    }
-
-                    status = null
-                    lastExportedName = null
-                    working = true
-                    scope.launch {
-                        runCatching {
-                            val name = "box_backup_${stamp()}.zip"
-                            val saved = exportBackupToDownloads(backupScope, name)
-                            if (saved == null) {
-                                status = context.getString(R.string.settings_backup_restore_export_failed)
-                            } else {
-                                lastExportedName = name
-                                status = context.getString(R.string.settings_backup_restore_export_ok)
-                            }
-                        }.onFailure {
-                            status = it.message ?: context.getString(R.string.settings_backup_restore_failed)
-                        }
-                        working = false
-                    }
-                }
-            ) {
-                Text(text = label)
-            }
-        },
-        dismissButton = {
-            TextButton(
-                enabled = !working,
-                onClick = onDismiss
-            ) {
-                Text(text = stringResource(R.string.action_cancel), color = c.textPrimary)
+                    },
+                    enabled = !working
+                )
             }
         }
-    )
+    }
+
+    // 主 BottomSheet
+    HyperBottomSheet(
+        show = true,
+        onDismissRequest = { if (!working) onDismiss() },
+        title = stringResource(R.string.settings_backup_restore_title)
+    ) {
+        val scrollState = rememberScrollState()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(scrollState)
+                .padding(horizontal = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // 模式切换
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HyperFilterChip(
+                    selected = mode == BackupRestoreMode.BACKUP,
+                    onClick = { if (!working) mode = BackupRestoreMode.BACKUP },
+                    label = stringResource(R.string.settings_backup_restore_tab_backup),
+                    enabled = !working
+                )
+                HyperFilterChip(
+                    selected = mode == BackupRestoreMode.RESTORE,
+                    onClick = { if (!working) mode = BackupRestoreMode.RESTORE },
+                    label = stringResource(R.string.settings_backup_restore_tab_restore),
+                    enabled = !working
+                )
+            }
+
+            if (mode == BackupRestoreMode.BACKUP) {
+                // ── 备份模式 ──
+                Text(
+                    text = stringResource(R.string.settings_backup_restore_scope_title),
+                    style = MiuixTheme.textStyles.title4,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MiuixTheme.colorScheme.onSurface
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    HyperFilterChip(
+                        selected = backupScope == BackupRestoreScope.MODULES,
+                        onClick = { backupScope = BackupRestoreScope.MODULES },
+                        label = stringResource(R.string.settings_backup_restore_scope_modules),
+                        enabled = !working
+                    )
+                    HyperFilterChip(
+                        selected = backupScope == BackupRestoreScope.APPS,
+                        onClick = { backupScope = BackupRestoreScope.APPS },
+                        label = stringResource(R.string.settings_backup_restore_scope_apps),
+                        enabled = !working
+                    )
+                    HyperFilterChip(
+                        selected = backupScope == BackupRestoreScope.BOTH,
+                        onClick = { backupScope = BackupRestoreScope.BOTH },
+                        label = stringResource(R.string.settings_backup_restore_scope_both),
+                        enabled = !working
+                    )
+                }
+
+                // 导出按钮
+                top.yukonga.miuix.kmp.basic.Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !working,
+                    colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColorsPrimary(),
+                    onClick = {
+                        status = null
+                        lastExportedName = null
+                        working = true
+                        scope.launch {
+                            runCatching {
+                                val name = "box_backup_${stamp()}.zip"
+                                val saved = exportBackupToDownloads(backupScope, name)
+                                if (saved == null) {
+                                    status = context.getString(R.string.settings_backup_restore_export_failed)
+                                } else {
+                                    lastExportedName = name
+                                    status = context.getString(R.string.settings_backup_restore_export_ok)
+                                }
+                            }.onFailure {
+                                status = it.message ?: context.getString(R.string.settings_backup_restore_failed)
+                            }
+                            working = false
+                        }
+                    }
+                ) {
+                    if (working) {
+                        top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator(modifier = Modifier.size(16.dp))
+                    } else {
+                        Text(
+                            text = stringResource(R.string.settings_backup_restore_export),
+                            color = MiuixTheme.colorScheme.onPrimary
+                        )
+                    }
+                }
+
+                if (lastExportedName != null) {
+                    Text(
+                        text = stringResource(R.string.settings_backup_restore_exported, lastExportedName!!),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceSecondary
+                    )
+                }
+            } else {
+                // ── 恢复模式 ──
+                Text(
+                    text = stringResource(R.string.settings_backup_restore_file_title),
+                    style = MiuixTheme.textStyles.title4,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MiuixTheme.colorScheme.onSurface
+                )
+
+                // 文件选择卡片
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    cornerRadius = 16.dp,
+                    insideMargin = PaddingValues(14.dp),
+                    colors = CardDefaults.defaultColors(color = MiuixTheme.colorScheme.surfaceVariant),
+                    onClick = if (!working) { { picker.launch(arrayOf("application/zip")) } } else null
+                ) {
+                    Text(
+                        text = pickedName ?: stringResource(R.string.settings_backup_restore_file_pick),
+                        style = MiuixTheme.textStyles.body2,
+                        color = if (pickedName != null) MiuixTheme.colorScheme.onSurface else MiuixTheme.colorScheme.onSurfaceSecondary
+                    )
+                }
+
+                if (pickedUri != null) {
+                    val detectedLabel = when {
+                        detectedHasModules && detectedHasApps -> stringResource(R.string.settings_backup_restore_detect_both)
+                        detectedHasModules -> stringResource(R.string.settings_backup_restore_detect_modules)
+                        detectedHasApps -> stringResource(R.string.settings_backup_restore_detect_apps)
+                        else -> stringResource(R.string.settings_backup_restore_detect_unknown)
+                    }
+                    Text(
+                        text = stringResource(R.string.settings_backup_restore_detected, detectedLabel),
+                        style = MiuixTheme.textStyles.footnote1,
+                        color = MiuixTheme.colorScheme.onSurfaceSecondary
+                    )
+
+                    Text(
+                        text = stringResource(R.string.settings_backup_restore_scope_title),
+                        style = MiuixTheme.textStyles.title4,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MiuixTheme.colorScheme.onSurface
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        HyperFilterChip(
+                            selected = restoreScope == BackupRestoreScope.MODULES,
+                            onClick = { restoreScope = BackupRestoreScope.MODULES },
+                            label = stringResource(R.string.settings_backup_restore_scope_modules_only),
+                            enabled = !working
+                        )
+                        HyperFilterChip(
+                            selected = restoreScope == BackupRestoreScope.APPS,
+                            onClick = { restoreScope = BackupRestoreScope.APPS },
+                            label = stringResource(R.string.settings_backup_restore_scope_apps_only),
+                            enabled = !working
+                        )
+                        HyperFilterChip(
+                            selected = restoreScope == BackupRestoreScope.BOTH,
+                            onClick = { restoreScope = BackupRestoreScope.BOTH },
+                            label = stringResource(R.string.settings_backup_restore_scope_both),
+                            enabled = !working
+                        )
+                    }
+
+                    // 恢复按钮
+                    top.yukonga.miuix.kmp.basic.Button(
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !working,
+                        colors = top.yukonga.miuix.kmp.basic.ButtonDefaults.buttonColorsPrimary(),
+                        onClick = { showRestoreConfirm = true }
+                    ) {
+                        if (working) {
+                            top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator(modifier = Modifier.size(16.dp))
+                        } else {
+                            Text(
+                                text = stringResource(R.string.settings_backup_restore_restore),
+                                color = MiuixTheme.colorScheme.onPrimary
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 状态文本
+            if (status != null) {
+                Text(
+                    text = status!!,
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceSecondary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+        }
+    }
 }

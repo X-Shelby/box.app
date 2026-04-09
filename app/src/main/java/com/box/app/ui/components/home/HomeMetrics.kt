@@ -3,6 +3,7 @@
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -18,48 +20,57 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import com.box.app.ui.theme.AppFonts
 import androidx.compose.ui.unit.dp
 import com.kyant.shapes.Capsule
 import com.kyant.shapes.RoundedRectangle
 import com.box.app.R
-import com.box.app.ui.theme.appColors
-import com.box.app.utils.ThemeManager
 import java.util.Locale
+import androidx.compose.foundation.layout.PaddingValues
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.LinearProgressIndicator
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
-fun HomeTwoColumnGrid(models: List<HomeCardModel>) {
+fun HomeTwoColumnGrid(models: List<HomeCardModel>, modifier: Modifier = Modifier) {
     val rows = remember(models) { models.chunked(2) }
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         rows.forEach { row ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 MetricCard(
                     model = row[0],
@@ -88,9 +99,6 @@ fun HomeTwoColumnGrid(models: List<HomeCardModel>) {
 
 @Composable
 fun MetricCard(model: HomeCardModel, modifier: Modifier = Modifier) {
-    val c = appColors()
-    val container = c.card
-
     val clickModifier = if (model.onClick != null) {
         Modifier.clickable(
             interactionSource = remember { MutableInteractionSource() },
@@ -104,10 +112,11 @@ fun MetricCard(model: HomeCardModel, modifier: Modifier = Modifier) {
 
     Card(
         modifier = modifier.then(clickModifier),
-        shape = RoundedRectangle(18.dp),
-        colors = CardDefaults.cardColors(containerColor = container),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        cornerRadius = 18.dp,
+        insideMargin = PaddingValues(0.dp),
+        colors = CardDefaults.defaultColors(color = metricCardContainerColor(model.kind))
     ) {
+        val palette = metricPalette(model)
         if (model.kind == HomeMetricKind.System) {
             SystemMetricCardContent(model = model)
         } else if (model.kind == HomeMetricKind.Subscription) {
@@ -118,8 +127,8 @@ fun MetricCard(model: HomeCardModel, modifier: Modifier = Modifier) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 118.dp)
-                    .padding(14.dp)
+                    .heightIn(min = 120.dp)
+                    .padding(12.dp)
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
@@ -128,27 +137,35 @@ fun MetricCard(model: HomeCardModel, modifier: Modifier = Modifier) {
                     ) {
                         Text(
                             text = model.title,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = c.textSecondary,
+                            style = MiuixTheme.textStyles.button,
+                            color = palette.titleColor,
                             modifier = Modifier.weight(1f)
                         )
                         MetricBadge(
                             kind = model.kind,
                             accent = model.accent,
-                            overrideText = model.badgeText
+                            overrideText = model.badgeText,
+                            containerColor = palette.badgeContainer,
+                            textColor = palette.badgeText
                         )
                     }
 
                     Spacer(modifier = Modifier.height(6.dp))
+                    val animatedValueColor by animateColorAsState(
+                        targetValue = metricValueColor(model),
+                        animationSpec = tween(durationMillis = 360),
+                        label = "metric_value_${model.kind}"
+                    )
                     Text(
                         text = model.value,
                         style = if (model.kind == HomeMetricKind.Ip) {
-                            MaterialTheme.typography.titleMedium
+                            MiuixTheme.textStyles.title4
                         } else {
-                            MaterialTheme.typography.headlineSmall
+                            MiuixTheme.textStyles.title2
                         },
-                        fontWeight = FontWeight.SemiBold,
-                        color = c.textPrimary,
+                        fontFamily = AppFonts.dataFamily,
+                        fontWeight = FontWeight.Medium,
+                        color = if (model.kind == HomeMetricKind.Ip) palette.valueColor else animatedValueColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -156,8 +173,8 @@ fun MetricCard(model: HomeCardModel, modifier: Modifier = Modifier) {
                     if (model.subtitle.isNotBlank()) {
                         Text(
                             text = model.subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = c.textSecondary,
+                            style = MiuixTheme.textStyles.body2,
+                            color = palette.supportingColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -166,23 +183,25 @@ fun MetricCard(model: HomeCardModel, modifier: Modifier = Modifier) {
                     if (model.progress != null) {
                         Spacer(modifier = Modifier.height(10.dp))
                         LinearProgressIndicator(
-                            progress = { model.progress.coerceIn(0f, 1f) },
+                            progress = model.progress.coerceIn(0f, 1f),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(6.dp)
                                 .clip(RoundedRectangle(6.dp)),
-                            color = model.accent,
-                            trackColor = c.divider
+                            colors = top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults.progressIndicatorColors(
+                                foregroundColor = model.accent,
+                                backgroundColor = palette.progressTrack
+                            )
                         )
                     }
                 }
 
                 if (model.onCornerAction != null && model.cornerActionIcon != null) {
                     Icon(
-                        imageVector = model.cornerActionIcon,
-                        contentDescription = null,
-                        tint = c.textSecondary,
-                        modifier = Modifier
+                            imageVector = model.cornerActionIcon,
+                            contentDescription = null,
+                            tint = palette.supportingColor,
+                            modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(end = 2.dp, bottom = 2.dp)
                             .size(20.dp)
@@ -220,22 +239,34 @@ private fun formatSpeedValue(raw: String): String {
 
 @Composable
 private fun SpeedMetricCardContent(model: HomeCardModel) {
-    val c = appColors()
-    val isDark = ThemeManager.shouldUseDarkTheme()
-    val upColor = if (isDark) Color(0xFF7DE3B5) else Color(0xFF12936A)
-    val downColor = if (isDark) Color(0xFF79C6FF) else Color(0xFF1E6EA8)
+    val upColor = MiuixTheme.colorScheme.primary
+    val downColor = homeSuccessColors().accent
+    val palette = metricPalette(model)
     val upValue = remember(model.subtitle) { formatSpeedValue(extractSpeedValue(model.subtitle)) }
     val downValue = remember(model.value) { formatSpeedValue(model.value) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 118.dp)
-            .padding(14.dp)
+            .heightIn(min = 120.dp)
     ) {
+        // 背景实时图表（全卡片覆盖，渐变淡出）
+        if (model.sparkDown != null && model.sparkUp != null) {
+            SpeedSparkline(
+                downSeries = model.sparkDown,
+                upSeries = model.sparkUp,
+                downColor = downColor,
+                upColor = upColor,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
+
+        // 前景内容
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -243,8 +274,8 @@ private fun SpeedMetricCardContent(model: HomeCardModel) {
             ) {
                 Text(
                     text = model.title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = c.textSecondary,
+                    style = MiuixTheme.textStyles.button,
+                    color = palette.titleColor,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -252,79 +283,55 @@ private fun SpeedMetricCardContent(model: HomeCardModel) {
                 MetricBadge(
                     kind = model.kind,
                     accent = model.accent,
-                    overrideText = model.badgeText
+                    overrideText = model.badgeText,
+                    containerColor = palette.badgeContainer,
+                    textColor = palette.badgeText
                 )
             }
 
+            Spacer(modifier = Modifier.weight(1f))
+
+            // 上传行
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Column(
-                    modifier = Modifier.weight(0.6f),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowUpward,
-                            contentDescription = null,
-                            tint = upColor,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = upValue,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = c.textPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowDownward,
-                            contentDescription = null,
-                            tint = downColor,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = downValue,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = c.textPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(0.4f)
-                        .fillMaxWidth()
-                ) {
-                    if (model.sparkDown != null && model.sparkUp != null) {
-                        SpeedSparkline(
-                            downSeries = model.sparkDown,
-                            upSeries = model.sparkUp,
-                            downColor = downColor,
-                            upColor = upColor,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(28.dp)
-                        )
-                    } else {
-                        Spacer(modifier = Modifier.fillMaxWidth().height(28.dp))
-                    }
-                }
+                Icon(
+                    imageVector = Icons.Filled.ArrowUpward,
+                    contentDescription = null,
+                    tint = upColor,
+                    modifier = Modifier.size(13.dp)
+                )
+                Text(
+                    text = upValue,
+                    style = MiuixTheme.textStyles.body2,
+                    fontFamily = AppFonts.dataFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    color = upColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            // 下载行
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowDownward,
+                    contentDescription = null,
+                    tint = downColor,
+                    modifier = Modifier.size(13.dp)
+                )
+                Text(
+                    text = downValue,
+                    style = MiuixTheme.textStyles.body2,
+                    fontFamily = AppFonts.dataFamily,
+                    fontWeight = FontWeight.SemiBold,
+                    color = downColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
@@ -332,75 +339,88 @@ private fun SpeedMetricCardContent(model: HomeCardModel) {
 
 @Composable
 private fun SubscriptionMetricCardContent(model: HomeCardModel) {
-    val c = appColors()
+    val animatedAccentColor by animateColorAsState(
+        targetValue = model.accent,
+        animationSpec = tween(durationMillis = 360),
+        label = "subscription_accent"
+    )
+    val palette = metricPalette(model)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 118.dp)
-            .padding(14.dp)
+            .heightIn(min = 120.dp)
+            .padding(12.dp)
     ) {
-        Column(
+        // 标题行：钉在顶部
+        Row(
             modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = model.title,
+                style = MiuixTheme.textStyles.button,
+                color = palette.titleColor,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            MetricBadge(
+                kind = model.kind,
+                accent = model.accent,
+                overrideText = model.badgeText,
+                containerColor = palette.badgeContainer,
+                textColor = palette.badgeText
+            )
+        }
+
+        // 数据区域：钉在底部，与系统卡底部对齐
+        Column(
+            modifier = Modifier.fillMaxWidth().align(Alignment.BottomStart),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = model.title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = c.textSecondary,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                MetricBadge(
-                    kind = model.kind,
-                    accent = model.accent,
-                    overrideText = model.badgeText
-                )
-            }
-
+            // 已用：标签左 + 数值右
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = stringResource(R.string.home_subscription_used_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = c.textSecondary,
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = palette.supportingColor,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = stringResource(R.string.home_subscription_total_label),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = c.textSecondary,
+                    text = model.value,
+                    style = MiuixTheme.textStyles.footnote1,
+                    fontFamily = AppFonts.dataFamily,
+                    fontWeight = FontWeight.Medium,
+                    color = palette.valueColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
+            // 总量：同上行模式
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = model.value,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = c.textPrimary,
+                    text = stringResource(R.string.home_subscription_total_label),
+                    style = MiuixTheme.textStyles.footnote2,
+                    color = palette.supportingColor,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = model.subtitle,
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = c.textPrimary,
+                    style = MiuixTheme.textStyles.footnote1,
+                    fontFamily = AppFonts.dataFamily,
+                    fontWeight = FontWeight.Medium,
+                    color = palette.valueColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -408,13 +428,15 @@ private fun SubscriptionMetricCardContent(model: HomeCardModel) {
 
             if (model.progress != null) {
                 LinearProgressIndicator(
-                    progress = { model.progress.coerceIn(0f, 1f) },
+                    progress = model.progress.coerceIn(0f, 1f),
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedRectangle(6.dp)),
-                    color = model.accent,
-                    trackColor = c.divider
+                    colors = top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults.progressIndicatorColors(
+                        foregroundColor = animatedAccentColor,
+                        backgroundColor = palette.progressTrack
+                    )
                 )
             }
         }
@@ -445,9 +467,8 @@ private fun ramDisplayCeilingMb(ramMb: Float?): Int {
 
 @Composable
 private fun SystemMetricCardContent(model: HomeCardModel) {
-    val c = appColors()
-    val isDark = ThemeManager.shouldUseDarkTheme()
     val isActive = model.isActive
+    val palette = metricPalette(model)
 
     val cpuPercent = remember(model.value) { parseCpuPercent(model.value) }
     val ramMb = remember(model.subtitle) { parseRamMb(model.subtitle) }
@@ -468,57 +489,72 @@ private fun SystemMetricCardContent(model: HomeCardModel) {
     )
 
     val cpuColor = when {
-        (cpuPercent ?: 0f) >= 100f -> Color(0xFFE5534B)
-        (cpuPercent ?: 0f) >= 85f -> Color(0xFFDD8B28)
-        else -> if (isDark) Color(0xFF60A5FA) else Color(0xFF2563EB)
+        (cpuPercent ?: 0f) >= 100f -> homeDangerColors().accent
+        (cpuPercent ?: 0f) >= 85f -> homeWarningColors().accent
+        else -> homeSuccessColors().accent
     }
-    val ramColor = if (isDark) Color(0xFF34D399) else Color(0xFF059669)
-    val track = c.divider
+    val ramColor = homeInfoColors().accent
+    val animatedCpuColor by animateColorAsState(
+        targetValue = cpuColor,
+        animationSpec = tween(durationMillis = 360),
+        label = "system_cpu_color"
+    )
+    val animatedRamColor by animateColorAsState(
+        targetValue = ramColor,
+        animationSpec = tween(durationMillis = 360),
+        label = "system_ram_color"
+    )
+    val track = palette.progressTrack
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 118.dp)
-            .padding(14.dp)
+            .heightIn(min = 120.dp)
+            .padding(12.dp)
     ) {
+        // 标题行：钉在顶部
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = model.title,
+                style = MiuixTheme.textStyles.button,
+                color = palette.titleColor,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            MetricBadge(
+                kind = model.kind,
+                accent = model.accent,
+                overrideText = model.badgeText,
+                containerColor = palette.badgeContainer,
+                textColor = palette.badgeText
+            )
+        }
+
+        // 数据区域：钉在底部
         Column(
             modifier = Modifier
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .align(Alignment.BottomStart),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = model.title,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = c.textSecondary,
-                    modifier = Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                MetricBadge(
-                    kind = model.kind,
-                    accent = model.accent,
-                    overrideText = model.badgeText
-                )
-            }
-
             if (isActive) {
                 SystemMetricBar(
                     label = "CPU",
                     valueText = cpuPercent?.let { String.format(Locale.US, "%.1f%%", it) } ?: "--",
                     progress = cpuProgress,
-                    color = cpuColor,
+                    color = animatedCpuColor,
                     trackColor = track
                 )
                 SystemMetricBar(
                     label = "RAM",
-                    valueText = ramMb?.let { "${it.toInt()}MB" } ?: "--",
+                    valueText = ramMb?.let { String.format(Locale.US, "%.1fMB", it) } ?: "--",
                     rightHint = "/${ramCeiling}MB",
                     progress = ramProgress,
-                    color = ramColor,
+                    color = animatedRamColor,
                     trackColor = track
                 )
             } else {
@@ -530,21 +566,22 @@ private fun SystemMetricCardContent(model: HomeCardModel) {
 
 @Composable
 private fun SystemMetricDisabledHint() {
-    val c = appColors()
-    val isDark = ThemeManager.shouldUseDarkTheme()
-    val hintColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
-    val hintBg = hintColor.copy(alpha = if (isDark) 0.18f else 0.12f)
+    val palette = metricPaletteForKind(
+        kind = HomeMetricKind.System,
+        accent = MiuixTheme.colorScheme.secondary,
+        isActive = false
+    )
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedRectangle(10.dp))
-            .background(hintBg)
+            .background(palette.badgeContainer)
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
         Text(
             text = stringResource(R.string.home_system_disabled_hint),
-            style = MaterialTheme.typography.bodySmall,
-            color = c.textPrimary,
+            style = MiuixTheme.textStyles.body2,
+            color = palette.supportingColor,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -560,7 +597,6 @@ private fun SystemMetricBar(
     trackColor: Color,
     rightHint: String? = null
 ) {
-    val c = appColors()
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -568,45 +604,55 @@ private fun SystemMetricBar(
         ) {
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = c.textSecondary,
+                style = MiuixTheme.textStyles.footnote2,
+                color = MiuixTheme.colorScheme.onSurfaceSecondary,
                 maxLines = 1,
                 modifier = Modifier.weight(1f),
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = valueText,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = c.textPrimary,
+                style = MiuixTheme.textStyles.footnote1,
+                fontFamily = AppFonts.dataFamily,
+                fontWeight = FontWeight.Medium,
+                color = MiuixTheme.colorScheme.onSurface,
                 maxLines = 1
             )
             if (!rightHint.isNullOrBlank()) {
                 Spacer(modifier = Modifier.size(4.dp))
                 Text(
                     text = rightHint,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = c.textSecondary,
+                    style = MiuixTheme.textStyles.footnote2,
+                    fontFamily = AppFonts.dataFamily,
+                    color = MiuixTheme.colorScheme.onSurfaceSecondary,
                     maxLines = 1
                 )
             }
         }
 
         LinearProgressIndicator(
-            progress = { progress.coerceIn(0f, 1f) },
+            progress = progress.coerceIn(0f, 1f),
             modifier = Modifier
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(RoundedRectangle(6.dp)),
-            color = color,
-            trackColor = trackColor
+            colors = top.yukonga.miuix.kmp.basic.ProgressIndicatorDefaults.progressIndicatorColors(
+                foregroundColor = color,
+                backgroundColor = trackColor
+            )
         )
     }
 }
 
 @Composable
-fun MetricBadge(kind: HomeMetricKind, accent: Color, modifier: Modifier = Modifier, overrideText: String? = null) {
-    val c = appColors()
+fun MetricBadge(
+    kind: HomeMetricKind,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    overrideText: String? = null,
+    containerColor: Color? = null,
+    textColor: Color? = null
+) {
     val text = overrideText ?: when (kind) {
         HomeMetricKind.Service -> stringResource(R.string.home_badge_service)
         HomeMetricKind.Ip -> stringResource(R.string.home_badge_ip)
@@ -616,87 +662,205 @@ fun MetricBadge(kind: HomeMetricKind, accent: Color, modifier: Modifier = Modifi
         HomeMetricKind.System -> stringResource(R.string.home_badge_sys)
     }
 
-    val isDark = ThemeManager.shouldUseDarkTheme()
-    val bg = accent.copy(alpha = if (isDark) 0.18f else 0.12f)
+    val palette = metricBadgePalette(kind = kind, accent = accent)
 
-    Box(
+    Card(
         modifier = modifier
-            .clip(Capsule())
-            .background(bg)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        contentAlignment = Alignment.Center
+            .clip(Capsule()),
+        cornerRadius = 999.dp,
+        insideMargin = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
+        colors = CardDefaults.defaultColors(color = containerColor ?: palette.first)
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.labelSmall,
-            color = c.textPrimary
+            style = MiuixTheme.textStyles.footnote2,
+            fontWeight = FontWeight.SemiBold,
+            color = textColor ?: palette.second
         )
     }
 }
 
+/**
+ * 实时网速图表：直接绘制最新数据，仅 Y 轴比例平滑过渡。
+ *
+ * 数据每秒 takeLast(60) 自然左移一位，相邻帧差异极小，
+ * 无需逐点插值动画，避免 snapTo/animateTo 重播问题。
+ */
 @Composable
 fun SpeedSparkline(
     downSeries: List<Float>,
     upSeries: List<Float>,
     downColor: Color,
     upColor: Color,
-    strokeWidth: Float = 2f,
     modifier: Modifier = Modifier
 ) {
-    val c = appColors()
-    val track = c.divider.copy(alpha = 0.35f)
-    val all = (downSeries + upSeries)
-    val maxV = (all.maxOrNull() ?: 0f).coerceAtLeast(1f)
+    // 仅 Y 轴比例需要平滑过渡（防止峰值出现/消失时整体跳变）
+    val rawMax = ((downSeries + upSeries).maxOrNull() ?: 0f).coerceAtLeast(1f)
+    val animMaxV by animateFloatAsState(
+        targetValue = rawMax,
+        animationSpec = tween(durationMillis = 800, easing = androidx.compose.animation.core.FastOutSlowInEasing),
+        label = "sparkline_max"
+    )
 
-    Canvas(modifier = modifier) {
+    Canvas(modifier = modifier.graphicsLayer { clip = true }) {
         val w = size.width
         val h = size.height
-        drawLine(track, start = Offset(0f, h - 1f), end = Offset(w, h - 1f), strokeWidth = 1f)
+        val topMargin = h * 0.12f
+        val chartH = h - topMargin
 
         fun buildSmoothPath(series: List<Float>): Path {
             val p = Path()
             if (series.isEmpty()) return p
             val n = series.size
             fun point(i: Int): Offset {
-                val x = if (n == 1) 0f else (i.toFloat() / (n - 1).toFloat()) * w
-                val v = (series[i] / maxV).coerceIn(0f, 1f)
-                val y = h - (v * (h - 2f))
+                val x = if (n == 1) w / 2f else (i.toFloat() / (n - 1).toFloat()) * w
+                val v = (series[i] / animMaxV).coerceIn(0f, 1f)
+                val y = topMargin + chartH * (1f - v)
                 return Offset(x, y)
             }
-
             val p0 = point(0)
             p.moveTo(p0.x, p0.y)
             if (n == 1) return p
-
-            // Quadratic smoothing using midpoints.
             for (i in 1 until n) {
                 val prev = point(i - 1)
                 val cur = point(i)
-                val mid = Offset((prev.x + cur.x) / 2f, (prev.y + cur.y) / 2f)
-                if (i == 1) {
-                    p.quadraticTo(prev.x, prev.y, mid.x, mid.y)
-                } else {
-                    p.quadraticTo(prev.x, prev.y, mid.x, mid.y)
-                }
-                if (i == n - 1) {
-                    p.quadraticTo(cur.x, cur.y, cur.x, cur.y)
-                }
+                val cpX = (prev.x + cur.x) / 2f
+                p.cubicTo(cpX, prev.y, cpX, cur.y, cur.x, cur.y)
             }
             return p
         }
 
-        val downPath = buildSmoothPath(downSeries)
-        val upPath = buildSmoothPath(upSeries)
+        fun buildFillPath(series: List<Float>): Path {
+            val stroke = buildSmoothPath(series)
+            if (series.isEmpty()) return stroke
+            val n = series.size
+            val lastX = if (n == 1) w / 2f else w
+            val fill = Path()
+            fill.addPath(stroke)
+            fill.lineTo(lastX, h)
+            fill.lineTo(0f, h)
+            fill.close()
+            return fill
+        }
+
+        // 下载：渐变填充 + 描边
         drawPath(
-            path = downPath,
-            color = downColor,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            path = buildFillPath(downSeries),
+            brush = Brush.verticalGradient(
+                colors = listOf(downColor.copy(alpha = 0.25f), Color.Transparent),
+                startY = topMargin, endY = h
+            ),
+            style = Fill
         )
         drawPath(
-            path = upPath,
-            color = upColor,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round, join = StrokeJoin.Round)
+            path = buildSmoothPath(downSeries),
+            color = downColor.copy(alpha = 0.8f),
+            style = Stroke(width = 1.8f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+
+        // 上传：渐变填充 + 描边
+        drawPath(
+            path = buildFillPath(upSeries),
+            brush = Brush.verticalGradient(
+                colors = listOf(upColor.copy(alpha = 0.15f), Color.Transparent),
+                startY = topMargin, endY = h
+            ),
+            style = Fill
+        )
+        drawPath(
+            path = buildSmoothPath(upSeries),
+            color = upColor.copy(alpha = 0.6f),
+            style = Stroke(width = 1.5f, cap = StrokeCap.Round, join = StrokeJoin.Round)
         )
     }
 }
 
+@Composable
+private fun metricCardContainerColor(kind: HomeMetricKind): Color = when (kind) {
+    HomeMetricKind.Ip -> metricPaletteForKind(kind).containerColor
+    HomeMetricKind.Speed -> metricPaletteForKind(kind).containerColor
+    HomeMetricKind.Subscription -> metricPaletteForKind(kind).containerColor
+    HomeMetricKind.System -> metricPaletteForKind(kind).containerColor
+    HomeMetricKind.Service -> metricPaletteForKind(kind).containerColor
+    HomeMetricKind.Latency -> metricPaletteForKind(kind).containerColor
+}
+
+@Composable
+private fun metricValueColor(model: HomeCardModel): Color = metricPalette(model).valueColor
+
+private data class MetricPalette(
+    val containerColor: Color,
+    val titleColor: Color,
+    val valueColor: Color,
+    val supportingColor: Color,
+    val badgeContainer: Color,
+    val badgeText: Color,
+    val progressTrack: Color
+)
+
+@Composable
+private fun metricPalette(model: HomeCardModel): MetricPalette = metricPaletteForKind(
+    kind = model.kind,
+    accent = model.accent,
+    isActive = model.isActive
+)
+
+@Composable
+private fun metricPaletteForKind(
+    kind: HomeMetricKind,
+    accent: Color = MiuixTheme.colorScheme.primary,
+    isActive: Boolean = true
+): MetricPalette {
+    val scheme = MiuixTheme.colorScheme
+    val dark = isSystemInDarkTheme()
+    return MetricPalette(
+        containerColor = scheme.surfaceContainer,
+        titleColor = scheme.onSurface,
+        valueColor = when (kind) {
+            HomeMetricKind.Service, HomeMetricKind.Latency -> accent
+            HomeMetricKind.Speed -> scheme.onSurface
+            HomeMetricKind.System -> if (isActive) scheme.onSurface else scheme.onSurfaceSecondary
+            else -> scheme.onSurface
+        },
+        supportingColor = scheme.onSurfaceSecondary,
+        badgeContainer = when (kind) {
+            // NET: 主色蓝，保持不变
+            HomeMetricKind.Speed -> scheme.primary
+            // SUB/延迟: 紫色调 — 传达订阅/数据的高级感
+            HomeMetricKind.Subscription, HomeMetricKind.Latency ->
+                if (dark) Color(0xFF311B92) else Color(0xFFD1C4E9)
+            // WAN/IP: 青色调 — 传达地理/连接位置
+            HomeMetricKind.Ip ->
+                if (dark) Color(0xFF004D40) else Color(0xFFB2DFDB)
+            // SYS: 蓝灰调 — 传达技术/系统感
+            HomeMetricKind.System -> if (isActive) {
+                if (dark) Color(0xFF37474F) else Color(0xFFCFD8DC)
+            } else {
+                if (dark) Color(0xFF2D3B41) else Color(0xFFCFD8DC)
+            }
+            HomeMetricKind.Service ->
+                if (dark) Color(0xFF37474F) else Color(0xFFCFD8DC)
+        },
+        badgeText = when (kind) {
+            HomeMetricKind.Speed -> scheme.onPrimary
+            HomeMetricKind.Subscription, HomeMetricKind.Latency ->
+                if (dark) Color(0xFFB39DDB) else Color(0xFF4527A0)
+            HomeMetricKind.Ip ->
+                if (dark) Color(0xFF80CBC4) else Color(0xFF00695C)
+            HomeMetricKind.System -> if (isActive) {
+                if (dark) Color(0xFFB0BEC5) else Color(0xFF263238)
+            } else {
+                if (dark) Color(0xFF607D8B) else Color(0xFF607D8B)
+            }
+            HomeMetricKind.Service ->
+                if (dark) Color(0xFFB0BEC5) else Color(0xFF263238)
+        },
+        progressTrack = scheme.surfaceContainerHighest
+    )
+}
+
+@Composable
+private fun metricBadgePalette(kind: HomeMetricKind, accent: Color): Pair<Color, Color> {
+    val palette = metricPaletteForKind(kind = kind, accent = accent)
+    return palette.badgeContainer to palette.badgeText
+}

@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -42,7 +42,7 @@ fun LatencyWideCard(
     val c = appColors()
     val container = c.card
     val isOk = { v: String ->
-        v.isNotBlank() && v != "-" && v != "N/A" && v != "..." && v != "¡ª"
+        v.isNotBlank() && v != "-" && v != "N/A" && v != "..." && v != "Â¡Âª"
     }
     val okCount = listOf(baidu, cloudflare, google).count { isOk(it) }
 
@@ -80,7 +80,7 @@ fun LatencyWideCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = stringResource(R.string.home_latency_title),
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MiuixTheme.textStyles.button,
                     color = c.textSecondary,
                     modifier = Modifier.weight(1f)
                 )
@@ -105,7 +105,7 @@ private fun LatencyMini(label: String, value: String, modifier: Modifier = Modif
 
     fun parseLatencyMs(raw: String): Int? {
         val cleaned = raw.trim().lowercase()
-        if (cleaned.isBlank() || cleaned == "-" || cleaned == "n/a" || cleaned == "..." || cleaned == "¡ª") return null
+        if (cleaned.isBlank() || cleaned == "-" || cleaned == "n/a" || cleaned == "..." || cleaned == "Â¡Âª") return null
         return cleaned.replace("ms", "").trim().toIntOrNull()
     }
 
@@ -123,8 +123,8 @@ private fun LatencyMini(label: String, value: String, modifier: Modifier = Modif
             .background(chip)
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = c.textSecondary)
-        Text(text = value, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = valueColor)
+        Text(text = label, style = MiuixTheme.textStyles.footnote2, color = c.textSecondary)
+        Text(text = value, style = MiuixTheme.textStyles.footnote1, fontWeight = FontWeight.SemiBold, color = valueColor)
     }
 }
 

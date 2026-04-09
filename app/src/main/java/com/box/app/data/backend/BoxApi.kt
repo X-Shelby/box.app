@@ -46,6 +46,65 @@ internal object BoxApi {
         val fastestUpload: FastestConnection?
     )
 
+    data class ConnectionInfo(
+        val id: String,
+        val host: String,
+        val destinationIP: String,
+        val destinationPort: String,
+        val network: String,
+        val type: String,
+        val chains: List<String>,
+        val rule: String,
+        val rulePayload: String,
+        val download: Long,
+        val upload: Long,
+        val start: String,
+        val isAlive: Boolean
+    )
+
+    data class ClashVersionInfo(
+        val name: String,
+        val version: String,
+        val premium: Boolean,
+        val meta: Boolean
+    )
+
+    data class ClashConfigInfo(
+        val mode: String,
+        val logLevel: String,
+        val allowLan: Boolean,
+        val ipv6: Boolean,
+        val mixedPort: Int?,
+        val socksPort: Int?,
+        val httpPort: Int?,
+        val redirPort: Int?,
+        val tproxyPort: Int?,
+        val externalController: String,
+        val secretEnabled: Boolean
+    )
+
+    data class ClashProxyGroup(
+        val name: String,
+        val type: String,
+        val now: String,
+        val options: List<String>,
+        val alive: Boolean
+    )
+
+    data class ClashRuleInfo(
+        val type: String,
+        val payload: String,
+        val proxy: String
+    )
+
+    data class ClashProviderInfo(
+        val name: String,
+        val type: String,
+        val vehicleType: String,
+        val updatedAt: String,
+        val proxyCount: Int
+    )
+
     @Volatile
     private var cachedApiConfig: ApiConfig? = null
 
@@ -75,6 +134,60 @@ internal object BoxApi {
 
     fun clearApiConfigCache() {
         cachedApiConfig = null
+    }
+
+    private fun clashRequestBody(jsonBody: JSONObject?): okhttp3.RequestBody {
+        val mediaType = "application/json; charset=utf-8".toMediaTypeOrNull()
+        return (jsonBody?.toString() ?: "{}").toRequestBody(mediaType)
+    }
+
+    private fun encodePathSegment(value: String): String {
+        return URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+    }
+
+    private suspend fun executeClashTextRequest(
+        path: String,
+        method: String = "GET",
+        jsonBody: JSONObject? = null
+    ): String? = withContext(Dispatchers.IO) {
+        val apiConfig = cachedApiConfig ?: getExternalControllerConfig()?.also { cachedApiConfig = it } ?: return@withContext null
+        return@withContext try {
+            val url = "http://127.0.0.1:${apiConfig.port}$path"
+            val requestBuilder = Request.Builder().url(url)
+            if (!apiConfig.secret.isNullOrEmpty()) {
+                requestBuilder.header("Authorization", "Bearer ${apiConfig.secret}")
+            }
+
+            when (method.uppercase()) {
+                "GET" -> requestBuilder.get()
+                "PUT" -> requestBuilder.put(clashRequestBody(jsonBody))
+                "PATCH" -> requestBuilder.patch(clashRequestBody(jsonBody))
+                "DELETE" -> requestBuilder.delete(clashRequestBody(jsonBody))
+                else -> requestBuilder.method(method.uppercase(), clashRequestBody(jsonBody))
+            }
+
+            okHttpClient.newCall(requestBuilder.build()).execute().use { resp ->
+                if (!resp.isSuccessful) return@withContext null
+                resp.body.string().orEmpty()
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private suspend fun executeClashJsonRequest(
+        path: String,
+        method: String = "GET",
+        jsonBody: JSONObject? = null
+    ): JSONObject? {
+        val body = executeClashTextRequest(path = path, method = method, jsonBody = jsonBody)
+            ?.takeIf { it.isNotBlank() }
+            ?: return null
+        return try {
+            JSONObject(body)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     suspend fun getPid(): ShellExecutor.Result {
@@ -597,6 +710,8 @@ internal object BoxApi {
         return prop?.let { parseModuleVersion(it) } ?: "Unknown"
     }
 
+    suspend fun getModuleVersion(): String = getCurrentModuleVersion()
+
     suspend fun downloadApk(url: String, onProgress: (Int) -> Unit = {}): String? {
         // 简化版本，暂时返回null
         return null
@@ -829,6 +944,140 @@ internal object BoxApi {
         }
     }
 
+    suspend fun getClashVersionInfo(): ClashVersionInfo? {
+        val json = executeClashJsonRequest("/version") ?: return null
+        val version = json.optString("version").trim()
+        if (version.isEmpty()) return null
+        val name = json.optString("name").trim().ifEmpty {
+            val settings = getSettings()
+            Regex("^bin_name=\"?(.*?)\"?$", RegexOption.MULTILINE)
+                .find(settings)
+                ?.groupValues
+                ?.getOrNull(1)
+                ?.trim()
+                ?.ifEmpty { "clash" }
+                ?: "clash"
+        }
+        return ClashVersionInfo(
+            name = name,
+            version = version,
+            premium = json.optBoolean("premium", false),
+            meta = json.optBoolean("meta", false)
+        )
+    }
+
+    suspend fun getClashConfigInfo(): ClashConfigInfo? {
+        val json = executeClashJsonRequest("/configs") ?: return null
+        val externalController = json.optString("external-controller")
+            .ifBlank { json.optString("externalController") }
+        return ClashConfigInfo(
+            mode = json.optString("mode", "rule"),
+            logLevel = json.optString("log-level", "info"),
+            allowLan = json.optBoolean("allow-lan", false),
+            ipv6 = json.optBoolean("ipv6", false),
+            mixedPort = json.optInt("mixed-port").takeIf { it > 0 },
+            socksPort = json.optInt("socks-port").takeIf { it > 0 },
+            httpPort = json.optInt("port").takeIf { it > 0 },
+            redirPort = json.optInt("redir-port").takeIf { it > 0 },
+            tproxyPort = json.optInt("tproxy-port").takeIf { it > 0 },
+            externalController = externalController,
+            secretEnabled = json.optString("secret").isNotBlank()
+        )
+    }
+
+    suspend fun updateClashConfigs(
+        mode: String? = null,
+        logLevel: String? = null
+    ): Boolean {
+        if (mode == null && logLevel == null) return true
+        val payload = JSONObject()
+        if (!mode.isNullOrBlank()) payload.put("mode", mode)
+        if (!logLevel.isNullOrBlank()) payload.put("log-level", logLevel)
+        return executeClashTextRequest(
+            path = "/configs",
+            method = "PATCH",
+            jsonBody = payload
+        ) != null
+    }
+
+    suspend fun getProxyGroupsFromApi(): List<ClashProxyGroup> = withContext(Dispatchers.IO) {
+        val json = executeClashJsonRequest("/proxies") ?: return@withContext emptyList()
+        val proxies = json.optJSONObject("proxies") ?: return@withContext emptyList()
+        val names = mutableListOf<String>()
+        val keys = proxies.keys()
+        while (keys.hasNext()) names += keys.next()
+
+        return@withContext names
+            .sorted()
+            .mapNotNull { name ->
+                val item = proxies.optJSONObject(name) ?: return@mapNotNull null
+                val optionsArr = item.optJSONArray("all") ?: return@mapNotNull null
+                val options = buildList {
+                    for (i in 0 until optionsArr.length()) {
+                        val value = optionsArr.optString(i).trim()
+                        if (value.isNotEmpty()) add(value)
+                    }
+                }.distinct()
+                if (options.size <= 1) return@mapNotNull null
+                ClashProxyGroup(
+                    name = name,
+                    type = item.optString("type"),
+                    now = item.optString("now"),
+                    options = options,
+                    alive = item.optBoolean("alive", true)
+                )
+            }
+    }
+
+    suspend fun selectProxy(groupName: String, proxyName: String): Boolean {
+        if (groupName.isBlank() || proxyName.isBlank()) return false
+        val payload = JSONObject().put("name", proxyName)
+        return executeClashTextRequest(
+            path = "/proxies/${encodePathSegment(groupName)}",
+            method = "PUT",
+            jsonBody = payload
+        ) != null
+    }
+
+    suspend fun getRulesFromApi(): List<ClashRuleInfo> = withContext(Dispatchers.IO) {
+        val json = executeClashJsonRequest("/rules") ?: return@withContext emptyList()
+        val rules = json.optJSONArray("rules") ?: return@withContext emptyList()
+        return@withContext buildList {
+            for (i in 0 until rules.length()) {
+                val rule = rules.optJSONObject(i) ?: continue
+                add(
+                    ClashRuleInfo(
+                        type = rule.optString("type"),
+                        payload = rule.optString("payload"),
+                        proxy = rule.optString("proxy")
+                    )
+                )
+            }
+        }
+    }
+
+    suspend fun getProviderListFromApi(): List<ClashProviderInfo> = withContext(Dispatchers.IO) {
+        val json = getProvidersFromApi() ?: return@withContext emptyList()
+        val providers = json.optJSONObject("providers") ?: return@withContext emptyList()
+        val names = mutableListOf<String>()
+        val keys = providers.keys()
+        while (keys.hasNext()) names += keys.next()
+
+        return@withContext names
+            .sorted()
+            .mapNotNull { name ->
+                val provider = providers.optJSONObject(name) ?: return@mapNotNull null
+                val proxies = provider.optJSONArray("proxies")
+                ClashProviderInfo(
+                    name = name,
+                    type = provider.optString("type"),
+                    vehicleType = provider.optString("vehicleType"),
+                    updatedAt = provider.optString("updatedAt"),
+                    proxyCount = proxies?.length() ?: 0
+                )
+            }
+    }
+
     suspend fun getProxyTrafficFromApi(): TrafficStats? {
         val apiConfig = cachedApiConfig ?: getExternalControllerConfig()?.also { cachedApiConfig = it } ?: return null
         return try {
@@ -982,6 +1231,73 @@ internal object BoxApi {
             }
         } catch (_: Exception) {
             null
+        }
+    }
+
+    suspend fun getAllConnections(): List<ConnectionInfo> = withContext(Dispatchers.IO) {
+        val apiConfig = cachedApiConfig ?: getExternalControllerConfig()?.also { cachedApiConfig = it } ?: return@withContext emptyList()
+        return@withContext try {
+            val url = "http://127.0.0.1:${apiConfig.port}/connections"
+            val requestBuilder = Request.Builder().get().url(url)
+            if (!apiConfig.secret.isNullOrEmpty()) {
+                requestBuilder.header("Authorization", "Bearer ${apiConfig.secret}")
+            }
+            val resp = okHttpClient.newCall(requestBuilder.build()).execute()
+            resp.use { r ->
+                if (!r.isSuccessful) return@withContext emptyList()
+                val body = r.body.string().orEmpty()
+                if (body.isBlank()) return@withContext emptyList()
+                val json = JSONObject(body)
+                val conns = json.optJSONArray("connections") ?: return@withContext emptyList()
+                val result = mutableListOf<ConnectionInfo>()
+                for (i in 0 until conns.length()) {
+                    val c = conns.optJSONObject(i) ?: continue
+                    val metadata = c.optJSONObject("metadata")
+                    val chainArr = c.optJSONArray("chains")
+                    val chainList = mutableListOf<String>()
+                    if (chainArr != null) {
+                        for (j in 0 until chainArr.length()) chainList.add(chainArr.optString(j))
+                    }
+                    val host = metadata?.optString("sniffHost")?.takeIf { it.isNotBlank() }
+                        ?: metadata?.optString("host")?.takeIf { it.isNotBlank() }
+                        ?: metadata?.optString("destinationIP")?.takeIf { it.isNotBlank() }
+                        ?: ""
+                    result.add(
+                        ConnectionInfo(
+                            id = c.optString("id"),
+                            host = host,
+                            destinationIP = metadata?.optString("destinationIP").orEmpty(),
+                            destinationPort = metadata?.optString("destinationPort").orEmpty(),
+                            network = metadata?.optString("network").orEmpty(),
+                            type = metadata?.optString("type").orEmpty(),
+                            chains = chainList,
+                            rule = c.optString("rule"),
+                            rulePayload = c.optString("rulePayload"),
+                            download = c.optLong("download", 0L),
+                            upload = c.optLong("upload", 0L),
+                            start = c.optString("start"),
+                            isAlive = true
+                        )
+                    )
+                }
+                result
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun closeConnection(id: String): Boolean = withContext(Dispatchers.IO) {
+        val apiConfig = cachedApiConfig ?: getExternalControllerConfig()?.also { cachedApiConfig = it } ?: return@withContext false
+        return@withContext try {
+            val url = "http://127.0.0.1:${apiConfig.port}/connections/$id"
+            val requestBuilder = Request.Builder().delete("".toRequestBody(null)).url(url)
+            if (!apiConfig.secret.isNullOrEmpty()) {
+                requestBuilder.header("Authorization", "Bearer ${apiConfig.secret}")
+            }
+            okHttpClient.newCall(requestBuilder.build()).execute().use { it.isSuccessful }
+        } catch (_: Exception) {
+            false
         }
     }
 

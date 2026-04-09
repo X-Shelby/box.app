@@ -24,10 +24,11 @@ class InteractiveHighlight(
     val position: (size: Size, offset: Offset) -> Offset = { _, offset -> offset }
 ) {
 
+    // 更柔和的弹簧参数，按压/释放过渡更丝滑
     private val pressProgressAnimationSpec =
-        spring(0.5f, 300f, 0.001f)
+        spring(0.62f, 200f, 0.001f)
     private val positionAnimationSpec =
-        spring(0.5f, 300f, Offset.VisibilityThreshold)
+        spring(0.62f, 200f, Offset.VisibilityThreshold)
 
     private val pressProgressAnimation =
         Animatable(0f, 0.001f)

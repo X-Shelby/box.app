@@ -2,12 +2,17 @@ package com.box.app.utils
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import com.box.app.data.backend.ShellExecutor
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 object AppUtils {
 
@@ -15,6 +20,9 @@ object AppUtils {
     @Volatile private var cachedAtMs: Long = 0L
     @Volatile private var cachedApps: List<InstalledApp> = emptyList()
     private val cacheMutex = Mutex()
+
+    /** 并发 shell 命令信号量，避免过载 */
+    private val shellSemaphore = Semaphore(8)
 
     data class InstalledApp(
         val name: String,
@@ -30,219 +38,204 @@ object AppUtils {
     }
 
     suspend fun getInstalledApps(context: Context, forceRefresh: Boolean = false): List<InstalledApp> {
-        return cacheMutex.withLock {
-            val now = System.currentTimeMillis()
-            val cacheValid = cachedApps.isNotEmpty() && (now - cachedAtMs) < CACHE_TTL_MS
-            if (!forceRefresh && cacheValid) {
-                return@withLock cachedApps
-            }
-
-            val result = mutableListOf<InstalledApp>()
-            val pm = context.applicationContext.packageManager
-
-            // Get apps from current user (PackageManager approach)
-            val currentUserApps = getCurrentUserApps(pm)
-            result.addAll(currentUserApps)
-
-            // Get apps from other users using shell commands
-            val otherUserApps = getOtherUserApps(pm)
-            result.addAll(otherUserApps)
-
-            // Remove duplicates and sort
-            val uniqueApps = result
-                .distinctBy { it.userScopedPackageName }
-                .sortedWith(compareBy<InstalledApp>({ it.userId }, { it.isSystemApp }, { it.name.lowercase() }))
-
-            cachedApps = uniqueApps
-            cachedAtMs = now
-            uniqueApps
-        }
-    }
-
-    private fun getCurrentUserApps(pm: PackageManager): List<InstalledApp> {
-        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-
-        fun userIdFromUid(uid: Int): Int {
-            val perUserRange = 100_000
-            return uid / perUserRange
-        }
-
-        return apps
-            .asSequence()
-            .map { ai ->
-                val name = runCatching { pm.getApplicationLabel(ai).toString() }.getOrDefault(ai.packageName)
-                val userId = userIdFromUid(ai.uid)
-
-                val installTime = runCatching {
-                    pm.getPackageInfo(ai.packageName, 0).firstInstallTime
-                }.getOrDefault(0L)
-
-                val hasNetworkPermission = runCatching {
-                    val permissions = pm.getPackageInfo(
-                        ai.packageName,
-                        PackageManager.GET_PERMISSIONS
-                    ).requestedPermissions
-                    permissions?.any {
-                        it == android.Manifest.permission.INTERNET ||
-                            it == android.Manifest.permission.ACCESS_NETWORK_STATE ||
-                            it == android.Manifest.permission.ACCESS_WIFI_STATE
-                    } ?: false
-                }.getOrDefault(true)
-
-                InstalledApp(
-                    name = name,
-                    packageName = ai.packageName,
-                    userId = userId,
-                    isSystemApp = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
-                    apkPath = ai.publicSourceDir,
-                    installTime = installTime,
-                    hasNetworkPermission = hasNetworkPermission
-                )
-            }
-            .toList()
-    }
-
-    private suspend fun getOtherUserApps(pm: PackageManager): List<InstalledApp> {
-        val result = mutableListOf<InstalledApp>()
-
-        try {
-            // Get list of all users
-            val usersResult = ShellExecutor.execute("pm list users")
-            if (usersResult.exitCode != 0) return result
-
-            val userIds = mutableSetOf<Int>()
-            usersResult.stdout.lines().forEach { line ->
-                // Parse lines like "UserInfo{0:Owner:c13} running" or "UserInfo{10:Work profile:1030}"
-                val userIdMatch = Regex("UserInfo\\{(\\d+):").find(line)
-                userIdMatch?.groupValues?.get(1)?.toIntOrNull()?.let { userId ->
-                    if (userId != 0) { // Skip user 0 as we already got it via PackageManager
-                        userIds.add(userId)
-                    }
+        // 快路径：读缓存不阻塞扫描
+        if (!forceRefresh) {
+            cacheMutex.withLock {
+                val now = System.currentTimeMillis()
+                if (cachedApps.isNotEmpty() && (now - cachedAtMs) < CACHE_TTL_MS) {
+                    return cachedApps
                 }
             }
+        }
 
-            // Get packages for each user
-            userIds.forEach { userId ->
-                val packagesResult = ShellExecutor.execute("pm list packages --user $userId")
-                if (packagesResult.exitCode == 0) {
-                    packagesResult.stdout.lines().forEach { line ->
-                        if (line.startsWith("package:")) {
-                            val packageName = line.substring(8).trim()
-                            if (packageName.isNotBlank()) {
-                                val app = createAppFromShell(pm, packageName, userId)
-                                if (app != null) {
-                                    result.add(app)
-                                }
-                            }
-                        }
-                    }
-                }
+        // 慢路径：并发扫描，不持有锁
+        val result = coroutineScope {
+            val currentUserDeferred = async(Dispatchers.IO) {
+                scanCurrentUser(context.applicationContext.packageManager)
             }
-        } catch (e: Exception) {
-            // If shell commands fail, silently continue with current user apps only
+            val otherUsersDeferred = async(Dispatchers.IO) {
+                scanOtherUsers(context.applicationContext.packageManager)
+            }
+
+            val all = currentUserDeferred.await() + otherUsersDeferred.await()
+
+            // CPU 密集排序放 Default 调度器
+            withContext(Dispatchers.Default) {
+                all.distinctBy { it.userScopedPackageName }
+                    .sortedWith(
+                        compareBy<InstalledApp> { it.userId }
+                            .thenBy { it.isSystemApp }
+                            .thenBy { it.name.lowercase() }
+                    )
+            }
+        }
+
+        // 写缓存
+        cacheMutex.withLock {
+            cachedApps = result
+            cachedAtMs = System.currentTimeMillis()
         }
 
         return result
     }
 
-    private fun createAppFromShell(pm: PackageManager, packageName: String, userId: Int): InstalledApp? {
-        return try {
-            // Try to get app info from PackageManager first
-            val ai = try {
-                pm.getApplicationInfo(packageName, 0)
-            } catch (e: PackageManager.NameNotFoundException) {
-                // If not found in current user, create minimal info
-                null
-            }
+    // ─── 当前用户扫描（单次批量 PM 查询） ───────────────────────────────
 
-            val name = ai?.let { 
+    /**
+     * 用单次 getInstalledPackages(GET_PERMISSIONS) 批量获取所有信息，
+     * 替代原来 N×3 次 IPC 调用（name + installTime + permissions）。
+     */
+    private fun scanCurrentUser(pm: PackageManager): List<InstalledApp> {
+        val packages: List<PackageInfo> = runCatching {
+            pm.getInstalledPackages(
+                PackageManager.GET_PERMISSIONS or PackageManager.GET_META_DATA
+            )
+        }.getOrDefault(emptyList())
+
+        val perUserRange = 100_000
+
+        return packages.map { pi ->
+            val ai = pi.applicationInfo ?: return@map null
+
+            InstalledApp(
+                name = runCatching { pm.getApplicationLabel(ai).toString() }
+                    .getOrDefault(pi.packageName),
+                packageName = pi.packageName,
+                userId = ai.uid / perUserRange,
+                isSystemApp = (ai.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+                apkPath = ai.publicSourceDir,
+                installTime = pi.firstInstallTime,
+                hasNetworkPermission = pi.requestedPermissions?.any {
+                    it == android.Manifest.permission.INTERNET ||
+                        it == android.Manifest.permission.ACCESS_NETWORK_STATE ||
+                        it == android.Manifest.permission.ACCESS_WIFI_STATE
+                } ?: false
+            )
+        }.filterNotNull()
+    }
+
+    // ─── 多用户并发扫描 ─────────────────────────────────────────────────
+
+    private suspend fun scanOtherUsers(pm: PackageManager): List<InstalledApp> = coroutineScope {
+        val userIds = getOtherUserIds()
+        if (userIds.isEmpty()) return@coroutineScope emptyList()
+
+        // 所有用户并发获取包列表
+        val perUserPackages = userIds.map { userId ->
+            async(Dispatchers.IO) {
+                userId to getPackagesForUser(userId)
+            }
+        }.awaitAll()
+
+        // 所有包并发解析元数据（信号量限制并发度）
+        perUserPackages.flatMap { (userId, packageNames) ->
+            packageNames.chunked(50).flatMap { chunk ->
+                chunk.map { pkgName ->
+                    async(Dispatchers.IO) {
+                        shellSemaphore.acquire()
+                        try {
+                            resolveAppInfo(pm, pkgName, userId)
+                        } finally {
+                            shellSemaphore.release()
+                        }
+                    }
+                }.awaitAll().filterNotNull()
+            }
+        }
+    }
+
+    /** 获取非主用户 ID 列表 */
+    private suspend fun getOtherUserIds(): List<Int> = withContext(Dispatchers.IO) {
+        runCatching {
+            val result = ShellExecutor.execute("pm list users")
+            if (result.exitCode != 0) return@withContext emptyList()
+
+            val regex = Regex("UserInfo\\{(\\d+):")
+            result.stdout.lineSequence()
+                .mapNotNull { regex.find(it)?.groupValues?.get(1)?.toIntOrNull() }
+                .filter { it != 0 }
+                .toList()
+        }.getOrDefault(emptyList())
+    }
+
+    /** 获取指定用户的包名列表 */
+    private suspend fun getPackagesForUser(userId: Int): List<String> = withContext(Dispatchers.IO) {
+        runCatching {
+            val result = ShellExecutor.execute("pm list packages --user $userId")
+            if (result.exitCode != 0) return@withContext emptyList()
+
+            result.stdout.lineSequence()
+                .filter { it.startsWith("package:") }
+                .map { it.substring(8).trim() }
+                .filter { it.isNotBlank() }
+                .toList()
+        }.getOrDefault(emptyList())
+    }
+
+    /** 解析单个包的元数据 */
+    private fun resolveAppInfo(pm: PackageManager, packageName: String, userId: Int): InstalledApp? {
+        return runCatching {
+            val ai = runCatching { pm.getApplicationInfo(packageName, 0) }.getOrNull()
+
+            val name = ai?.let {
                 runCatching { pm.getApplicationLabel(it).toString() }.getOrDefault(packageName)
             } ?: packageName
 
-            val isSystemApp = ai?.let { (it.flags and ApplicationInfo.FLAG_SYSTEM) != 0 } ?: false
-            val apkPath = ai?.publicSourceDir
-
-            val installTime = ai?.let {
-                runCatching {
-                    pm.getPackageInfo(packageName, 0).firstInstallTime
-                }.getOrDefault(0L)
-            } ?: 0L
-
-            val hasNetworkPermission = ai?.let {
-                runCatching {
-                    val permissions = pm.getPackageInfo(
-                        packageName,
-                        PackageManager.GET_PERMISSIONS
-                    ).requestedPermissions
-                    permissions?.any {
-                        it == android.Manifest.permission.INTERNET ||
-                            it == android.Manifest.permission.ACCESS_NETWORK_STATE ||
-                            it == android.Manifest.permission.ACCESS_WIFI_STATE
-                    } ?: false
-                }.getOrDefault(true)
-            } ?: true
+            val pi = runCatching {
+                pm.getPackageInfo(packageName, PackageManager.GET_PERMISSIONS)
+            }.getOrNull()
 
             InstalledApp(
                 name = name,
                 packageName = packageName,
                 userId = userId,
-                isSystemApp = isSystemApp,
-                apkPath = apkPath,
-                installTime = installTime,
-                hasNetworkPermission = hasNetworkPermission
+                isSystemApp = ai?.let { (it.flags and ApplicationInfo.FLAG_SYSTEM) != 0 } ?: false,
+                apkPath = ai?.publicSourceDir,
+                installTime = pi?.firstInstallTime ?: 0L,
+                hasNetworkPermission = pi?.requestedPermissions?.any {
+                    it == android.Manifest.permission.INTERNET ||
+                        it == android.Manifest.permission.ACCESS_NETWORK_STATE ||
+                        it == android.Manifest.permission.ACCESS_WIFI_STATE
+                } ?: true
             )
-        } catch (e: Exception) {
-            null
-        }
+        }.getOrNull()
     }
 
-    /**
-     * Get all available user IDs on the system
-     */
-    suspend fun getAllUserIds(): List<Int> {
-        return try {
+    // ─── 公共工具方法 ───────────────────────────────────────────────────
+
+    suspend fun getAllUserIds(): List<Int> = withContext(Dispatchers.IO) {
+        runCatching {
             val result = ShellExecutor.execute("pm list users")
-            if (result.exitCode != 0) return listOf(0)
+            if (result.exitCode != 0) return@withContext listOf(0)
 
-            val userIds = mutableListOf<Int>()
-            result.stdout.lines().forEach { line ->
-                val userIdMatch = Regex("UserInfo\\{(\\d+):").find(line)
-                userIdMatch?.groupValues?.get(1)?.toIntOrNull()?.let { userId ->
-                    userIds.add(userId)
-                }
-            }
-            userIds.ifEmpty { listOf(0) }
-        } catch (e: Exception) {
-            listOf(0)
-        }
+            val regex = Regex("UserInfo\\{(\\d+):")
+            val ids = result.stdout.lineSequence()
+                .mapNotNull { regex.find(it)?.groupValues?.get(1)?.toIntOrNull() }
+                .toList()
+            ids.ifEmpty { listOf(0) }
+        }.getOrDefault(listOf(0))
     }
 
-    /**
-     * Get user display name for a given user ID
-     */
     suspend fun getUserDisplayName(userId: Int): String {
         if (userId == 0) return "Main"
-        
-        return try {
-            val result = ShellExecutor.execute("pm list users")
-            if (result.exitCode != 0) return "User $userId"
 
-            result.stdout.lines().forEach { line ->
-                val match = Regex("UserInfo\\{$userId:([^:]+):").find(line)
-                if (match != null) {
-                    val name = match.groupValues[1].trim()
-                    return when {
-                        name.contains("Work", ignoreCase = true) -> "Work"
-                        name.contains("Clone", ignoreCase = true) -> "Clone"
-                        name.contains("Dual", ignoreCase = true) -> "Dual"
-                        name.contains("Second", ignoreCase = true) -> "Second"
-                        else -> name.take(10) // Limit length
-                    }
+        return withContext(Dispatchers.IO) {
+            runCatching {
+                val result = ShellExecutor.execute("pm list users")
+                if (result.exitCode != 0) return@withContext "User $userId"
+
+                val match = Regex("UserInfo\\{$userId:([^:]+):").find(result.stdout)
+                    ?: return@withContext "User $userId"
+
+                val name = match.groupValues[1].trim()
+                when {
+                    name.contains("Work", ignoreCase = true) -> "Work"
+                    name.contains("Clone", ignoreCase = true) -> "Clone"
+                    name.contains("Dual", ignoreCase = true) -> "Dual"
+                    name.contains("Second", ignoreCase = true) -> "Second"
+                    else -> name.take(10)
                 }
-            }
-            "User $userId"
-        } catch (e: Exception) {
-            "User $userId"
+            }.getOrDefault("User $userId")
         }
     }
 }

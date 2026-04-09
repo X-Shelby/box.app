@@ -33,10 +33,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
@@ -74,6 +71,8 @@ import com.box.app.ui.components.LocalLiquidBackdrop
 import com.box.app.ui.components.SettingsToggleRow
 import com.box.app.ui.components.ToolsSectionCard
 import com.box.app.ui.components.contentPaddingWithNavBars
+import com.box.app.ui.miuix.HyperIconButton
+import com.box.app.ui.miuix.HyperTextField
 import com.box.app.ui.theme.appColors
 import com.box.app.utils.ThemeManager
 import com.box.app.R
@@ -231,7 +230,7 @@ fun SubscriptionScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(c.pageBg)
+            
             .imePadding()
     ) {
         LazyColumn(
@@ -431,7 +430,7 @@ private fun SubscriptionFloatingTopBar(
                 Text(
                     text = stringResource(R.string.tools_update_back_compact),
                     color = c.textPrimary,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MiuixTheme.textStyles.button,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -492,13 +491,13 @@ private fun LabeledTextField(
         Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.body1,
                 fontWeight = FontWeight.SemiBold,
                 color = c.textPrimary
             )
             Text(
                 text = subtitle,
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.footnote1,
                 color = c.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -506,27 +505,18 @@ private fun LabeledTextField(
         }
     }
 
-    OutlinedTextField(
+    HyperTextField(
         value = value,
         onValueChange = onValueChange,
         enabled = enabled,
+        label = placeholder,
         modifier = Modifier
             .fillMaxWidth()
             .alpha(contentAlpha)
             .padding(horizontal = 6.dp),
-        placeholder = {
-            Text(text = placeholder, style = MaterialTheme.typography.bodyMedium)
-        },
         singleLine = true,
-        textStyle = MaterialTheme.typography.bodyMedium.copy(color = c.textPrimary),
-        shape = RoundedRectangle(14.dp),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = c.divider,
-            unfocusedBorderColor = c.divider,
-            focusedContainerColor = c.cardAlt,
-            unfocusedContainerColor = c.cardAlt,
-            cursorColor = c.textPrimary
-        )
+        textStyle = MiuixTheme.textStyles.body2.copy(color = c.textPrimary),
+        readOnly = false
     )
 }
 
@@ -600,13 +590,13 @@ private fun EditableStringList(
         Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
             Text(
                 text = stringResource(R.string.action_add),
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.body1,
                 fontWeight = FontWeight.SemiBold,
                 color = c.textPrimary
             )
             Text(
                 text = stringResource(R.string.tools_subscription_append_item),
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.footnote1,
                 color = c.textSecondary
             )
         }
@@ -647,35 +637,26 @@ private fun EditableStringRow(
             )
         }
 
-        OutlinedTextField(
+        HyperTextField(
             value = value,
             onValueChange = onValueChange,
             enabled = enabled,
+            label = hint,
             modifier = Modifier
                 .weight(1f)
                 .padding(start = 12.dp),
-            placeholder = {
-                Text(text = hint, style = MaterialTheme.typography.bodyMedium)
-            },
             singleLine = true,
-            textStyle = MaterialTheme.typography.bodyMedium.copy(color = c.textPrimary),
-            shape = RoundedRectangle(14.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = c.divider,
-                unfocusedBorderColor = c.divider,
-                focusedContainerColor = c.cardAlt,
-                unfocusedContainerColor = c.cardAlt,
-                cursorColor = c.textPrimary
-            )
+            textStyle = MiuixTheme.textStyles.body2.copy(color = c.textPrimary),
+            readOnly = false
         )
 
-        IconButton(onClick = onDelete, enabled = enabled) {
-            Icon(
-                imageVector = Icons.Filled.Delete,
-                contentDescription = null,
-                tint = if (enabled) c.textSecondary else c.textSecondary.copy(alpha = 0.6f)
-            )
-        }
+        HyperIconButton(
+            onClick = onDelete,
+            icon = Icons.Filled.Delete,
+            modifier = Modifier.padding(start = 10.dp),
+            enabled = enabled,
+            tint = if (enabled) c.textSecondary else c.textSecondary.copy(alpha = 0.6f)
+        )
     }
 
     if (showDivider) {

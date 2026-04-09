@@ -58,6 +58,7 @@ internal object EnvironmentChecker {
 
     suspend fun requestRootAccess(): Boolean {
         invalidateCache()
+        PersistentRootShell.close()
         val res = try {
             ShellExecutor.execute("id -u 2>/dev/null")
         } catch (_: Exception) {

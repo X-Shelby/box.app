@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,10 +43,159 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.URL
+
+/**
+ * 两阶段 WebView 预热器：
+ *
+ * 阶段 1（后台线程，立即）：CookieManager.getInstance() 触发 Chromium native library 加载
+ * 阶段 2（主线程，空闲时）：预创建 WebView 实例并缓存，不加载任何 URL，零历史
+ *
+ * 使用时 take() 取出已初始化的 WebView，new WebView() 耗时从 ~500ms 降至 ~0ms。
+ */
+object WebViewPreloader {
+    @Volatile
+    private var prewarmedView: WebView? = null
+    @Volatile
+    private var providerLoaded = false
+
+    /**
+     * 在 Application.onCreate 调用。
+     * 阶段 1 立即在后台线程加载 native library；
+     * 阶段 2 在主线程 idle 时预创建 WebView 实例。
+     */
+    fun preload(context: Context) {
+        if (providerLoaded) return
+        // 阶段 1：后台线程加载 Chromium provider（不阻塞主线程）
+        Thread {
+            runCatching {
+                CookieManager.getInstance()
+                providerLoaded = true
+            }
+            // 阶段 2：provider 加载完成后，在主线程空闲时创建 WebView
+            Handler(Looper.getMainLooper()).post {
+                // 利用 MessageQueue.IdleHandler 在主线程完全空闲时执行
+                Looper.myQueue().addIdleHandler {
+                    if (prewarmedView == null) {
+                        runCatching {
+                            prewarmedView = WebView(context.applicationContext).apply {
+                                // 预配置常用 settings，减少 take() 后的重配置开销
+                                settings.apply {
+                                    javaScriptEnabled = true
+                                    domStorageEnabled = true
+                                    databaseEnabled = true
+                                    cacheMode = WebSettings.LOAD_DEFAULT
+                                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                    useWideViewPort = true
+                                    loadWithOverviewMode = true
+                                    textZoom = 100
+                                }
+                                setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
+                                // 不加载任何 URL → 零历史，零网络请求
+                            }
+                        }
+                    }
+                    false // 返回 false = 只执行一次
+                }
+            }
+        }.start()
+    }
+
+    /**
+     * 取出预热的 WebView（一次性）。取出后需要重新配置 settings/client。
+     * 若预热未完成则返回 null，调用方 fallback 到 new WebView()。
+     */
+    fun take(): WebView? {
+        val wv = prewarmedView
+        prewarmedView = null
+        return wv
+    }
+}
+
+// 静态缓存 JS 注入脚本，避免每次 onPageFinished 重建字符串
+private val DOWNLOAD_HOOK_JS = """
+(function(){
+  if (window.__boxDownloadHookInstalled) return;
+  window.__boxDownloadHookInstalled = true;
+  function guessMimeFromName(name) {
+    try {
+      var ext = (name || '').split('.').pop().toLowerCase();
+      if (ext === 'json') return 'application/json';
+      if (ext === 'txt' || ext === 'log') return 'text/plain';
+      if (ext === 'yaml' || ext === 'yml') return 'application/yaml';
+    } catch(e) {}
+    return '';
+  }
+  function sniffMimeFromText(t) {
+    try {
+      var s = (t || '').trim();
+      if (!s) return '';
+      if (s[0] === '{' || s[0] === '[') return 'application/json';
+    } catch(e) {}
+    return '';
+  }
+  async function readAsBase64AndMimeFromUrl(href) {
+    if (href.startsWith('data:')) {
+      try {
+        var comma = href.indexOf(',');
+        var meta = href.substring(5, comma > 0 ? comma : href.length);
+        var m = meta.split(';')[0] || '';
+        var b64 = comma > 0 ? href.substring(comma + 1) : '';
+        return { b64: b64, mime: m };
+      } catch(e) {
+        return { b64: '', mime: '' };
+      }
+    }
+    const res = await fetch(href);
+    const blob = await res.blob();
+    var mime = (blob && blob.type) ? blob.type : '';
+    var b64 = await new Promise(function(resolve, reject){
+      const reader = new FileReader();
+      reader.onloadend = function(){
+        try {
+          var s = reader.result || '';
+          var idx = s.indexOf(',');
+          resolve(idx >= 0 ? s.substring(idx + 1) : s);
+        } catch(e) { reject(e); }
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    if (!mime) {
+      try {
+        var text = await blob.text();
+        mime = sniffMimeFromText(text);
+      } catch(e) {}
+    }
+    return { b64: b64, mime: mime };
+  }
+  const __origClick = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function(){
+    try {
+      var dl = this.getAttribute('download') || '';
+      var href = this.getAttribute('href') || this.href || '';
+      if (dl && (href.startsWith('blob:') || href.startsWith('data:'))) {
+        (async () => {
+          try {
+            var info = await readAsBase64AndMimeFromUrl(href);
+            var mime = info.mime || guessMimeFromName(dl) || 'application/octet-stream';
+            var b64 = info.b64 || '';
+            if (window.BoxAndroid && window.BoxAndroid.saveBase64File) {
+              window.BoxAndroid.saveBase64File(dl, mime, b64);
+            }
+          } catch(e) {}
+        })();
+        return;
+      }
+    } catch(e) {}
+    return __origClick.apply(this, arguments);
+  };
+})();
+""".trimIndent()
 
 suspend fun clearWebViewAppData(context: Context): Boolean {
     return withContext(Dispatchers.Main) {
@@ -87,6 +237,7 @@ fun ThemedWebView(
     onTitleChange: ((String?) -> Unit)? = null,
     onWebError: ((String?) -> Unit)? = null,
     onCanGoBackChange: ((Boolean) -> Unit)? = null,
+    injectJsOnPageFinished: String? = null,
 ) {
     val context = LocalContext.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -200,7 +351,7 @@ fun ThemedWebView(
         }
     }
 
-    val viewClient = remember(isDark, onPageFinished, onWebError, onCanGoBackChange) {
+    val viewClient = remember(isDark, onPageFinished, onWebError, onCanGoBackChange, injectJsOnPageFinished) {
         object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val requestUrl = request?.url?.toString().orEmpty()
@@ -226,91 +377,11 @@ fun ThemedWebView(
                 // Ensure cookies are written to disk.
                 runCatching { cookieManager.flush() }
 
-                // Inject download hook for blob/data exports.
-                view?.evaluateJavascript(
-                    """
-                    (function(){
-                      if (window.__boxDownloadHookInstalled) return;
-                      window.__boxDownloadHookInstalled = true;
-                      function guessMimeFromName(name) {
-                        try {
-                          var ext = (name || '').split('.').pop().toLowerCase();
-                          if (ext === 'json') return 'application/json';
-                          if (ext === 'txt' || ext === 'log') return 'text/plain';
-                          if (ext === 'yaml' || ext === 'yml') return 'application/yaml';
-                        } catch(e) {}
-                        return '';
-                      }
-                      function sniffMimeFromText(t) {
-                        try {
-                          var s = (t || '').trim();
-                          if (!s) return '';
-                          if (s[0] === '{' || s[0] === '[') return 'application/json';
-                        } catch(e) {}
-                        return '';
-                      }
-                      async function readAsBase64AndMimeFromUrl(href) {
-                        if (href.startsWith('data:')) {
-                          try {
-                            var comma = href.indexOf(',');
-                            var meta = href.substring(5, comma > 0 ? comma : href.length);
-                            var m = meta.split(';')[0] || '';
-                            var b64 = comma > 0 ? href.substring(comma + 1) : '';
-                            return { b64: b64, mime: m };
-                          } catch(e) {
-                            return { b64: '', mime: '' };
-                          }
-                        }
-                        const res = await fetch(href);
-                        const blob = await res.blob();
-                        var mime = (blob && blob.type) ? blob.type : '';
-                        var b64 = await new Promise(function(resolve, reject){
-                          const reader = new FileReader();
-                          reader.onloadend = function(){
-                            try {
-                              var s = reader.result || '';
-                              var idx = s.indexOf(',');
-                              resolve(idx >= 0 ? s.substring(idx + 1) : s);
-                            } catch(e) { reject(e); }
-                          };
-                          reader.onerror = reject;
-                          reader.readAsDataURL(blob);
-                        });
-                        if (!mime) {
-                          try {
-                            var text = await blob.text();
-                            mime = sniffMimeFromText(text);
-                          } catch(e) {}
-                        }
-                        return { b64: b64, mime: mime };
-                      }
+                // Inject download hook（使用静态缓存 JS，避免每次重建字符串）
+                view?.evaluateJavascript(DOWNLOAD_HOOK_JS, null)
 
-                      // Intercept programmatic downloads triggered by a.download + a.click().
-                      const __origClick = HTMLAnchorElement.prototype.click;
-                      HTMLAnchorElement.prototype.click = function(){
-                        try {
-                          var dl = this.getAttribute('download') || '';
-                          var href = this.getAttribute('href') || this.href || '';
-                          if (dl && (href.startsWith('blob:') || href.startsWith('data:'))) {
-                            (async () => {
-                              try {
-                                var info = await readAsBase64AndMimeFromUrl(href);
-                                var mime = info.mime || guessMimeFromName(dl) || 'application/octet-stream';
-                                var b64 = info.b64 || '';
-                                if (window.BoxAndroid && window.BoxAndroid.saveBase64File) {
-                                  window.BoxAndroid.saveBase64File(dl, mime, b64);
-                                }
-                              } catch(e) {}
-                            })();
-                            return;
-                          }
-                        } catch(e) {}
-                        return __origClick.apply(this, arguments);
-                      };
-                    })();
-                    """.trimIndent(),
-                    null
-                )
+                // 注入外部自定义 JS（如 SmartDNS WebUI 自动登录）
+                injectJsOnPageFinished?.let { js -> view?.evaluateJavascript(js, null) }
             }
 
             override fun onReceivedError(view: WebView?, request: WebResourceRequest?, error: WebResourceError?) {
@@ -422,7 +493,8 @@ fun ThemedWebView(
             AndroidView(
                 factory = { ctx ->
                     val themedCtx = ContextThemeWrapper(ctx, R.style.Theme_BoxReApp)
-                    WebView(themedCtx).apply {
+                    // 优先取预热实例（已完成 Chromium 初始化），fallback 到新建
+                    (WebViewPreloader.take() ?: WebView(themedCtx)).apply {
                         layoutParams = ViewGroup.LayoutParams(
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
@@ -448,16 +520,39 @@ fun ThemedWebView(
 
                         addJavascriptInterface(jsBridge, "BoxAndroid")
 
-                        settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
-                        settings.cacheMode = WebSettings.LOAD_DEFAULT
-                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        settings.allowFileAccess = true
-                        settings.allowContentAccess = true
-                        settings.javaScriptCanOpenWindowsAutomatically = true
-                        settings.blockNetworkLoads = false
-                        settings.useWideViewPort = true
-                        settings.loadWithOverviewMode = true
+                        settings.apply {
+                            javaScriptEnabled = true
+                            domStorageEnabled = true
+                            databaseEnabled = true
+                            cacheMode = WebSettings.LOAD_DEFAULT
+                            mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                            allowFileAccess = true
+                            allowContentAccess = true
+                            javaScriptCanOpenWindowsAutomatically = true
+                            blockNetworkLoads = false
+                            useWideViewPort = true
+                            loadWithOverviewMode = true
+
+                            // 防止系统字体缩放影响 WebView 内页面布局
+                            textZoom = 100
+
+                            // ── 深色模式 ──
+                            // API 33+: algorithmicDarkening（自动跳过已支持 prefers-color-scheme 的站点）
+                            // API 29-32: forceDark（已弃用但为唯一选项）
+                            // API 28: 无原生 WebView 深色支持，由 Activity uiMode 间接影响
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                isAlgorithmicDarkeningAllowed = isDark
+                            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                                @Suppress("DEPRECATION")
+                                forceDark = if (isDark)
+                                    WebSettings.FORCE_DARK_ON
+                                else
+                                    WebSettings.FORCE_DARK_OFF
+                            }
+                        }
+
+                        // 硬件加速渲染层
+                        setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
 
                         webViewClient = viewClient
                         webChromeClient = chromeClient

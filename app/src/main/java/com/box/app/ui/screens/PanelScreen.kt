@@ -21,10 +21,9 @@ import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Widgets
 
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 
@@ -50,9 +49,9 @@ import com.box.app.R
 import com.box.app.data.backend.BoxApi
 import com.box.app.data.repo.HomeRepository
 import com.box.app.ui.components.bottomsheets.AppModalBottomSheet
+import com.box.app.ui.miuix.HyperDialog
 import com.box.app.ui.theme.appAccentColor
 import com.box.app.ui.theme.appColors
-import com.box.app.ui.theme.appErrorColor
 import com.box.app.ui.web.clearWebViewAppData
 import com.box.app.ui.web.ThemedWebView
 import com.box.app.utils.ThemeManager
@@ -72,7 +71,6 @@ fun PanelScreen(
 ) {
     val c = appColors()
     val accent = appAccentColor()
-    val danger = appErrorColor()
     val isDark = ThemeManager.shouldUseDarkTheme()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -314,57 +312,42 @@ fun PanelScreen(
     }
 
     if (showClearCacheDialog) {
-        AlertDialog(
+        HyperDialog(
+            show = true,
             onDismissRequest = { showClearCacheDialog = false },
-            containerColor = c.card,
-            tonalElevation = 0.dp,
-            title = {
-                Text(
-                    text = stringResource(R.string.web_action_clear_cache),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
-                    color = c.textPrimary
-                )
+            title = stringResource(R.string.web_action_clear_cache),
+            summary = stringResource(R.string.web_action_clear_cache_confirm_message),
+            confirmText = stringResource(R.string.web_action_clear_cache_confirm),
+            dismissText = stringResource(R.string.action_cancel),
+            onDismiss = { showClearCacheDialog = false },
+            onConfirm = {
+                if (clearingWebData) return@HyperDialog
+                showClearCacheDialog = false
+                clearingWebData = true
+                scope.launch {
+                    val ok = clearWebViewAppData(context)
+                    Toast
+                        .makeText(
+                            context,
+                            context.getString(
+                                if (ok) R.string.web_action_cache_cleared else R.string.web_action_cache_clear_failed
+                            ),
+                            Toast.LENGTH_SHORT
+                        )
+                        .show()
+                    if (ok) {
+                        panelWebError = null
+                        webReloadKey += 1
+                    }
+                    clearingWebData = false
+                }
             },
-            text = {
+            content = {
                 Text(
                     text = stringResource(R.string.web_action_clear_cache_confirm_message),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MiuixTheme.textStyles.body2,
                     color = c.textSecondary
                 )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (clearingWebData) return@TextButton
-                        showClearCacheDialog = false
-                        clearingWebData = true
-                        scope.launch {
-                            val ok = clearWebViewAppData(context)
-                            Toast
-                                .makeText(
-                                    context,
-                                    context.getString(
-                                        if (ok) R.string.web_action_cache_cleared else R.string.web_action_cache_clear_failed
-                                    ),
-                                    Toast.LENGTH_SHORT
-                                )
-                                .show()
-                            if (ok) {
-                                panelWebError = null
-                                webReloadKey += 1
-                            }
-                            clearingWebData = false
-                        }
-                    }
-                ) {
-                    Text(text = stringResource(R.string.web_action_clear_cache_confirm), color = danger)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearCacheDialog = false }) {
-                    Text(text = stringResource(R.string.action_cancel), color = c.textPrimary)
-                }
             }
         )
     }
@@ -372,7 +355,7 @@ fun PanelScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(c.pageBg)
+            
             .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
         Box(
@@ -430,7 +413,7 @@ fun PanelScreen(
                 ) {
                     Text(
                         text = panelWebError!!,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MiuixTheme.textStyles.footnote1,
                         color = c.textSecondary
                     )
                 }
@@ -440,7 +423,7 @@ fun PanelScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(c.pageBg)
+                
                 .height(topInset + topBarHeight)
                 .padding(top = topInset, start = 0.dp, end = 0.dp)
                 .clickable(
@@ -462,7 +445,7 @@ fun PanelScreen(
 
             Text(
                 text = pageTitle?.takeIf { it.isNotBlank() } ?: stringResource(R.string.panel_title),
-                style = MaterialTheme.typography.titleLarge,
+                style = MiuixTheme.textStyles.title2,
                 color = c.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -582,7 +565,7 @@ fun PanelScreen(
 
                     Text(
                         text = sheetTitle,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MiuixTheme.textStyles.title4,
                         color = c.textPrimary
                     )
 
@@ -624,7 +607,7 @@ fun PanelScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = p.name,
-                                        style = MaterialTheme.typography.bodyLarge,
+                                        style = MiuixTheme.textStyles.body1,
                                         color = c.textPrimary,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -639,7 +622,7 @@ fun PanelScreen(
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = displayUrl,
-                                            style = MaterialTheme.typography.bodySmall,
+                                            style = MiuixTheme.textStyles.footnote1,
                                             color = c.textSecondary,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -702,13 +685,13 @@ fun PanelScreen(
                     ) {
                         Text(
                             text = addPanelTitle,
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MiuixTheme.textStyles.body1,
                             color = c.textPrimary
                         )
 
                         Text(
                             text = nameLabel,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.footnote1,
                             color = c.textSecondary
                         )
 
@@ -730,7 +713,7 @@ fun PanelScreen(
                                 singleLine = true,
                                 textStyle = androidx.compose.ui.text.TextStyle(
                                     color = c.textPrimary,
-                                    fontSize = MaterialTheme.typography.bodyLarge.fontSize
+                                    fontSize = MiuixTheme.textStyles.body1.fontSize
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -738,14 +721,14 @@ fun PanelScreen(
                                 Text(
                                     text = nameLabel,
                                     color = c.textSecondary,
-                                    style = MaterialTheme.typography.bodyLarge
+                                    style = MiuixTheme.textStyles.body1
                                 )
                             }
                         }
 
                         Text(
                             text = urlLabel,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MiuixTheme.textStyles.footnote1,
                             color = c.textSecondary
                         )
 
@@ -767,7 +750,7 @@ fun PanelScreen(
                                 singleLine = true,
                                 textStyle = androidx.compose.ui.text.TextStyle(
                                     color = c.textPrimary,
-                                    fontSize = MaterialTheme.typography.bodyLarge.fontSize
+                                    fontSize = MiuixTheme.textStyles.body1.fontSize
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -775,7 +758,7 @@ fun PanelScreen(
                                 Text(
                                     text = urlLabel,
                                     color = c.textSecondary,
-                                    style = MaterialTheme.typography.bodyLarge
+                                    style = MiuixTheme.textStyles.body1
                                 )
                             }
                         }
@@ -784,7 +767,7 @@ fun PanelScreen(
                             Text(
                                 text = addError!!,
                                 color = c.textSecondary,
-                                style = MaterialTheme.typography.bodySmall
+                                style = MiuixTheme.textStyles.footnote1
                             )
                         }
 
@@ -827,7 +810,7 @@ fun PanelScreen(
                                 Text(
                                     text = stringResource(R.string.action_add),
                                     color = accent,
-                                    style = MaterialTheme.typography.labelLarge
+                                    style = MiuixTheme.textStyles.button
                                 )
                             }
                         }

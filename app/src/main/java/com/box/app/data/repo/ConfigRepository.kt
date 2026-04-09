@@ -3,6 +3,9 @@ package com.box.app.data.repo
 import com.box.app.data.backend.BoxApi
 import com.box.app.data.backend.ShellExecutor
 import com.box.app.data.model.ConfigFsItem
+import com.topjohnwu.superuser.io.SuFile
+import com.topjohnwu.superuser.io.SuFileInputStream
+import com.topjohnwu.superuser.io.SuFileOutputStream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -192,22 +195,31 @@ object ConfigRepository {
         val absFile = resolveWithinRoot(relativeOrAbsPath)
         val abs = absFile.data?.path
             ?: return@withContext Result(error = absFile.error ?: "Invalid path")
-        val res = ShellExecutor.execute("cat ${shQuote(abs)} 2>/dev/null")
-        if (res.exitCode == 0) Result(data = res.stdout) else Result(error = res.stdout.ifBlank { res.stderr }.ifBlank { "Read failed" })
+        runCatching {
+            val suFile = SuFile(abs)
+            if (!suFile.exists()) return@withContext Result(error = "File not found")
+            val content = SuFileInputStream.open(suFile).bufferedReader().use { it.readText() }
+            Result(data = content)
+        }.getOrElse {
+            Result(error = it.message ?: "Read failed")
+        }
     }
 
     suspend fun writeFile(relativeOrAbsPath: String, content: String): Result<Unit> = withContext(Dispatchers.IO) {
         val absFile = resolveWithinRoot(relativeOrAbsPath)
         val abs = absFile.data?.path
             ?: return@withContext Result(error = absFile.error ?: "Invalid path")
-        val tmp = File.createTempFile("cfg_", ".tmp")
-        try {
-            tmp.writeText(content)
-            val cmd = "cat ${shQuote(tmp.absolutePath)} > ${shQuote(abs)}"
-            val res = ShellExecutor.execute(cmd)
-            if (res.exitCode == 0) Result(data = Unit) else Result(error = res.stdout.ifBlank { res.stderr }.ifBlank { "Write failed" })
-        } finally {
-            runCatching { tmp.delete() }
+        runCatching {
+            val suFile = SuFile(abs)
+            suFile.parentFile?.let { parent ->
+                if (!parent.exists()) parent.mkdirs()
+            }
+            SuFileOutputStream.open(suFile).use { out ->
+                out.write(content.toByteArray(Charsets.UTF_8))
+            }
+            Result(data = Unit)
+        }.getOrElse {
+            Result(error = it.message ?: "Write failed")
         }
     }
 
@@ -350,18 +362,8 @@ object ConfigRepository {
         content: String,
         fileNameForTemp: String
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        val targetFile = resolveWithinRoot(relativePath)
-        val target = targetFile.data?.path
-            ?: return@withContext Result(error = targetFile.error ?: "Invalid path")
-        val tmp = File.createTempFile("box_pull_", "_$fileNameForTemp")
-        try {
-            tmp.writeText(content)
-            val cmd = "cat ${shQuote(tmp.absolutePath)} > ${shQuote(target)}"
-            val writeRes = ShellExecutor.execute(cmd)
-            if (writeRes.exitCode == 0) Result(data = Unit) else Result(error = writeRes.stdout.ifBlank { writeRes.stderr }.ifBlank { "Write failed" })
-        } finally {
-            runCatching { tmp.delete() }
-        }
+        // 复用 writeFile，已适配 libsu SuFileOutputStream
+        writeFile(relativePath, content)
     }
 
     suspend fun warmUpShell(): Unit = withContext(Dispatchers.IO) {

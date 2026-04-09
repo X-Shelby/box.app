@@ -57,7 +57,7 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.material3.Text
 import com.box.app.ui.components.ToolsSectionCard
 import com.box.app.ui.components.ToolsSubHeader
@@ -191,7 +191,7 @@ fun ToolsUpdateCnipScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(c.pageBg)
+            
     ) {
         LazyColumn(
             state = listState,
@@ -412,13 +412,13 @@ private fun CnipIpsetHint() {
             Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
                 Text(
                     text = stringResource(R.string.tools_update_tip_title),
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MiuixTheme.textStyles.body1,
                     fontWeight = FontWeight.SemiBold,
                     color = accent
                 )
                 Text(
                     text = stringResource(R.string.tools_cnip_ipset_hint),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = c.textPrimary
                 )
             }
@@ -463,13 +463,13 @@ private fun CnipLabeledTextField(
             Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MiuixTheme.textStyles.body1,
                     color = c.textPrimary,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = c.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -488,7 +488,7 @@ private fun CnipLabeledTextField(
                 Text(
                     text = placeholder,
                     color = c.textSecondary,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MiuixTheme.textStyles.body2
                 )
             },
             colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
@@ -535,7 +535,7 @@ private fun CnipSettingsFloatingTopBar(
             Text(
                 text = stringResource(R.string.tools_update_back_compact),
                 color = c.textPrimary,
-                style = MaterialTheme.typography.labelLarge,
+                style = MiuixTheme.textStyles.button,
                 fontWeight = FontWeight.SemiBold
             )
         }

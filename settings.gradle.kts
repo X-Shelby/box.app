@@ -21,8 +21,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven("https://jitpack.io")
+        maven("https://maven.aliyun.com/repository/public")
     }
 }
 
 rootProject.name = "BoxReApp"
 include(":app")
+include(":libs:hyperx-compose")

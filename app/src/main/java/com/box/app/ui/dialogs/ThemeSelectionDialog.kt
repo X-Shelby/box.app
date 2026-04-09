@@ -11,26 +11,24 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.box.app.R
+import com.box.app.ui.miuix.HyperDialog
 import com.box.app.ui.theme.appAccentColor
 import com.box.app.ui.theme.appColors
 import com.box.app.utils.ThemeManager
 import com.box.app.utils.ThemeMode
 import com.kyant.shapes.RoundedRectangle
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun ThemeSelectionDialog(
@@ -38,21 +36,13 @@ fun ThemeSelectionDialog(
     onDismiss: () -> Unit,
     onSelect: (ThemeMode) -> Unit
 ) {
-    val c = appColors()
-    
-    AlertDialog(
+    HyperDialog(
+        show = true,
         onDismissRequest = onDismiss,
-        containerColor = c.card,
-        tonalElevation = 0.dp,
-        title = {
-            Text(
-                text = stringResource(R.string.theme_dialog_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = c.textPrimary
-            )
-        },
-        text = {
+        title = stringResource(R.string.theme_dialog_title),
+        confirmText = stringResource(R.string.action_cancel),
+        onConfirm = onDismiss,
+        content = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -64,11 +54,6 @@ fun ThemeSelectionDialog(
                         onClick = { onSelect(mode) }
                     )
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.action_cancel), color = c.textPrimary)
             }
         }
     )
@@ -110,7 +95,7 @@ private fun ThemeOptionItem(
                     ThemeMode.DARK -> stringResource(R.string.settings_theme_dark)
                     ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_follow_system)
                 },
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.subtitle,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                 color = c.textPrimary
             )
@@ -120,7 +105,7 @@ private fun ThemeOptionItem(
                     ThemeMode.DARK -> stringResource(R.string.theme_dark_desc)
                     ThemeMode.SYSTEM -> stringResource(R.string.theme_system_desc)
                 },
-                style = MaterialTheme.typography.bodySmall,
+                style = MiuixTheme.textStyles.body2,
                 color = c.textSecondary
             )
         }

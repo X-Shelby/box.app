@@ -44,20 +44,30 @@
     <string name="onboarding_permissions_title">权限</string>
     <string name="onboarding_permissions_open_settings">系统设置</string>
     <string name="onboarding_perm_request">授权</string>
+    <string name="onboarding_required_permissions">必需权限</string>
     <string name="onboarding_perm_root_title">Root 权限</string>
     <string name="onboarding_perm_root_desc">必需。用于控制 Box 服务并应用系统网络规则。</string>
+    <string name="onboarding_perm_root_summary">点击授予 Root 权限</string>
+    <string name="onboarding_perm_granted">已授予</string>
+    <string name="onboarding_perm_requesting">正在请求…</string>
+    <string name="onboarding_root_denied">Root 被拒绝，请在 Root 管理器中授权</string>
     <string name="onboarding_perm_notifications_title">通知权限</string>
     <string name="onboarding_perm_notifications_desc">可选。仅在需要启用通知相关功能时才会请求。</string>
+    <string name="onboarding_perm_notifications_summary">服务状态及告警通知</string>
     <string name="onboarding_perm_apps_title">应用列表访问</string>
-    <string name="onboarding_perm_apps_desc">可选。用于应用列表黑白名单，部分系统需要你在“系统设置”中手动授予“获取应用列表/应用信息”权限。</string>
+    <string name="onboarding_perm_apps_desc">可选。用于应用列表黑白名单，部分系统需要你在"系统设置"中手动授予"获取应用列表/应用信息"权限。</string>
+    <string name="onboarding_perm_apps_summary">用于应用代理规则</string>
     <string name="onboarding_perm_wifi_title">Wi‑Fi 匹配</string>
     <string name="onboarding_perm_wifi_desc">可选。扫描附近 Wi‑Fi / 热点可能需要位置权限与附近设备权限。</string>
+    <string name="onboarding_perm_wifi_summary">扫描附近 Wi‑Fi 网络</string>
 
     <string name="onboarding_usage_title">使用方法</string>
-    <string name="onboarding_usage_body">在“主页”的服务状态卡片右侧小卡片中可切换：核心、模式、IPv6（需在服务停止状态下操作）。\n\n在“网络控制”页面：\n- 点击条目前的图标可扫描附近 Wi‑Fi 或扫描已连接本机热点的设备</string>
+    <string name="onboarding_usage_body">在"主页"的服务状态卡片右侧小卡片中可切换：核心、模式、IPv6（需在服务停止状态下操作）。\n\n在"网络控制"页面：\n- 点击条目前的图标可扫描附近 Wi‑Fi 或扫描已连接本机热点的设备</string>
     <string name="onboarding_tips_title">使用技巧</string>
-    <string name="onboarding_tips_body">更新前建议先停止服务。\n\n工具页：\n- 更新核心 / 订阅 / WebUI / CNIP：点击右侧图标即可下载更新\n\n设置页：\n- 在“模块版本”处可点击检查更新</string>
+    <string name="onboarding_tips_body">更新前建议先停止服务。\n\n工具页：\n- 更新核心 / 订阅 / WebUI / CNIP：点击右侧图标即可下载更新\n\n设置页：\n- 在"模块版本"处可点击检查更新</string>
     <string name="onboarding_finish">完成</string>
+    <string name="onboarding_continue">继续</string>
+    <string name="onboarding_optional_permissions_hint">您可以稍后设置下列可选权限</string>
 
     <!-- Quick Settings / Foreground service -->
     <string name="qs_tile_service_label">Box 服务</string>
@@ -95,7 +105,7 @@
     <string name="home_env_check_failed">环境检查失败</string>
     <string name="home_environment_not_ready">环境未就绪</string>
     <string name="home_please_wait">请稍候…</string>
-    <string name="home_tap_start_to_enable">点击“启动”以启用</string>
+    <string name="home_tap_start_to_enable">点击"启动"以启用</string>
 
     <string name="home_header_title">Box</string>
     <string name="home_header_subtitle">状态与指标</string>
@@ -142,7 +152,7 @@
     <string name="home_ip_geo_sheet_subtitle">IPv4 与 IPv6 检测详情</string>
     <string name="home_ip_geo_ipv4_title">IPv4</string>
     <string name="home_ip_geo_ipv6_title">IPv6</string>
-    <string name="home_ip_geo_loading">加载中...</string>
+    <string name="home_ip_geo_loading">加载中</string>
     <string name="home_ip_geo_unavailable">暂不可用</string>
     <string name="home_ip_geo_field_ip">IP</string>
     <string name="home_ip_geo_field_location">Location</string>
@@ -179,6 +189,7 @@
     <string name="home_core_label">核心</string>
     <string name="home_mode_label">模式</string>
     <string name="home_ipv6_label">IPv6</string>
+    <string name="home_dns_label">DNS</string>
     <string name="home_placeholder_dash">—</string>
 
     <string name="home_action_start">启动</string>
@@ -249,6 +260,15 @@
     <string name="settings_blur_effects">模糊效果</string>
     <string name="settings_blur_effects_subtitle">启用液态玻璃与背景模糊效果</string>
     <string name="settings_blur_effects_unsupported_subtitle">需要 Android 12 及以上版本</string>
+    <string name="settings_liquid_glass_nav_bar">液态玻璃导航栏</string>
+    <string name="settings_liquid_glass_nav_bar_subtitle">使用悬浮胶囊式毛玻璃导航栏</string>
+    <string name="settings_hyperx_nav_transitions">HyperX 导航动画</string>
+    <string name="settings_hyperx_nav_transitions_subtitle">弹簧物理页面转场，更快更流畅</string>
+    <string name="settings_maple_font_logs">日志 Maple 字体</string>
+    <string name="settings_maple_font_logs_subtitle">日志内容使用 Maple Mono CN 等宽字体</string>
+    <string name="settings_maple_font_logs_downloading">正在下载字体…</string>
+    <string name="settings_maple_font_logs_ready">字体就绪</string>
+    <string name="settings_maple_font_logs_failed">下载失败，请重试</string>
     <string name="settings_liquid_glass_lens_strength">折射强度</string>
     <string name="settings_liquid_glass_lens_strength_subtitle">调节玻璃折射效果强度</string>
     <string name="settings_liquid_glass_blur_strength">模糊强度</string>
@@ -470,6 +490,9 @@
     <string name="tools_network_control_hotspot_mac_picker_empty">暂无客户端</string>
     <string name="tools_network_control_hotspot_mac_picker_error">获取失败</string>
     <string name="tools_network_control_append_item">追加一个条目</string>
+    <string name="tools_network_control_quick_fill_current">当前 WiFi</string>
+    <string name="tools_network_control_quick_paste">粘贴</string>
+    <string name="tools_network_control_quick_clear">全部清空</string>
     <string name="tools_network_control_wifi_picker_title">附近的 Wi-Fi</string>
     <string name="tools_network_control_wifi_picker_loading">扫描中...</string>
     <string name="tools_network_control_wifi_picker_empty">未发现 Wi-Fi</string>
@@ -478,6 +501,29 @@
     <string name="tools_network_control_wifi_picker_location_required">需要开启定位才能扫描附近的 Wi-Fi</string>
     <string name="tools_network_control_load_failed">加载失败</string>
     <string name="tools_network_control_save_failed">保存失败</string>
+    <string name="tools_network_control_clash_section_title">Clash API</string>
+    <string name="tools_network_control_clash_section_subtitle">控制器、代理组、规则与连接</string>
+    <string name="tools_network_control_clash_load_failed">加载 Clash API 失败</string>
+    <string name="tools_network_control_clash_action_failed">Clash API 操作失败</string>
+    <string name="tools_network_control_clash_unavailable">Clash API 不可用</string>
+    <string name="tools_network_control_controller_title">外部控制器</string>
+    <string name="tools_network_control_controller_auth_on">已启用密钥</string>
+    <string name="tools_network_control_controller_auth_off">未设置密钥</string>
+    <string name="tools_network_control_mode_title">运行模式</string>
+    <string name="tools_network_control_mode_subtitle">切换 Clash 当前运行模式</string>
+    <string name="tools_network_control_log_level_title">日志级别</string>
+    <string name="tools_network_control_log_level_subtitle">调整核心日志输出级别</string>
+    <string name="tools_network_control_reload_config_title">重载核心配置</string>
+    <string name="tools_network_control_reload_config_subtitle">通过 Clash API 强制重载配置</string>
+    <string name="tools_network_control_selector_section_title">代理组</string>
+    <string name="tools_network_control_selector_section_subtitle">直接通过 Clash API 切换代理组目标</string>
+    <string name="tools_network_control_provider_sheet_title">提供者</string>
+    <string name="tools_network_control_rules_sheet_title">规则</string>
+    <string name="tools_network_control_connections_sheet_title">连接</string>
+    <string name="tools_network_control_connections_empty">当前没有活跃连接</string>
+    <string name="tools_network_control_provider_label">提供者</string>
+    <string name="tools_network_control_selector_label">代理组</string>
+    <string name="tools_network_control_connections_label">连接</string>
     <string name="tools_update_core_title">核心</string>
     <string name="tools_update_core_subtitle_choose_channel">选择核心通道</string>
     <string name="tools_update_core_section_title">核心</string>
@@ -501,7 +547,7 @@
     <string name="tools_cnip_bypass_ipv4_subtitle">仅绕过 IPv4 列表</string>
     <string name="tools_cnip_bypass_ipv6_title">绕过 CNIP (IPv6)</string>
     <string name="tools_cnip_bypass_ipv6_subtitle">仅绕过 IPv6 列表</string>
-    <string name="tools_cnip_ipset_hint">此功能依赖 ipset。可前往首页点击“系统”卡片查看是否可用。</string>
+    <string name="tools_cnip_ipset_hint">此功能依赖 ipset。可前往首页点击"系统"卡片查看是否可用。</string>
 
     <string name="tools_cnip_section_files_title">文件</string>
     <string name="tools_cnip_section_files_subtitle">CNIP 文件路径</string>
@@ -530,6 +576,17 @@
     <string name="tools_logs_status_available">可用</string>
     <string name="tools_logs_status_current">当前</string>
     <string name="tools_logs_no_files">没有日志文件</string>
+    <string name="tools_logs_section_source">日志来源</string>
+    <string name="tools_logs_section_view">查看方式</string>
+    <string name="tools_logs_tab_module">模块日志</string>
+    <string name="tools_logs_tab_detail">详细日志</string>
+    <string name="tools_logs_log_file">日志文件</string>
+    <string name="tools_logs_log_directory">目录：%1$s</string>
+    <string name="tools_logs_recent_lines">最近 %1$d 行</string>
+    <string name="tools_logs_live">实时</string>
+    <string name="tools_logs_static">静态</string>
+    <string name="tools_logs_no_content">暂无日志内容</string>
+    <string name="tools_logs_detail_hint">支持选择复制，且仍会遵循日志字体设置项。</string>
     <string name="tools_logs_delete_dialog_title">删除日志文件？</string>
     <string name="tools_logs_delete_dialog_body">将永久删除 %2$s 中的 %1$s。</string>
 
@@ -557,10 +614,12 @@
     <string name="tools_config_new_name">新名称</string>
 
     <string name="tools_config_delete_title">删除 %1$s？</string>
-    <string name="tools_config_delete_confirm">确定要删除“%1$s”吗？</string>
+    <string name="tools_config_delete_confirm">确定要删除"%1$s"吗？</string>
     <string name="tools_config_delete_folder_warning">这将删除文件夹及其所有内容。</string>
     <string name="tools_config_delete_file_warning">此操作无法撤销。</string>
 
+    <string name="tools_config_tab_manage">管理</string>
+    <string name="tools_config_tab_select">选择</string>
     <string name="tools_config_files_folders_title">文件与文件夹</string>
     <string name="tools_config_loading">加载中...</string>
     <string name="tools_config_no_results_found">未找到结果</string>
@@ -600,6 +659,8 @@
 
     <!-- Tools / Apps -->
     <string name="tools_apps_title">应用</string>
+    <string name="tools_apps_hint_unsaved">有未保存的更改，请点击保存按钮</string>
+    <string name="tools_apps_hint_restart">配置已保存，需要重启服务才能生效</string>
     <string name="tools_apps_proxy_blacklist">黑名单</string>
     <string name="tools_apps_proxy_whitelist">白名单</string>
     <string name="tools_apps_proxy_core">核心</string>
@@ -618,6 +679,7 @@
     <string name="tools_apps_no_results">没有结果</string>
     <string name="tools_apps_user_fallback">用户 %1$d</string>
     <string name="tools_apps_failed_update_proxy_mode">更新 proxy_mode 失败</string>
+    <string name="tools_apps_failed_apply_config">重启服务以应用应用规则失败</string>
     <string name="tools_apps_selected_count">(%1$d)</string>
     <string name="tools_apps_restart_tip_title">重启提示</string>
     <string name="tools_apps_restart_tip_body">应用规则保存后，需要重启服务才会生效。</string>
@@ -663,6 +725,16 @@
     <string name="bottomsheet_subscription_none">暂无订阅</string>
     <string name="bottomsheet_subscription_expires">到期：%1$s</string>
     <string name="bottomsheet_subscription_updated">更新于 %1$s</string>
+    <string name="bottomsheet_subscription_expiry_unknown">到期时间未知</string>
+    <string name="bottomsheet_subscription_expiry_expired">已过期 %1$d 天</string>
+    <string name="bottomsheet_subscription_expiry_today">今天到期</string>
+    <string name="bottomsheet_subscription_expiry_days">%1$d 天后到期</string>
+    <string name="bottomsheet_subscription_expiry_days_date">%1$d 天后到期 (%2$s)</string>
+    <string name="bottomsheet_subscription_update_never">从未更新</string>
+    <string name="bottomsheet_subscription_update_just_now">刚刚更新</string>
+    <string name="bottomsheet_subscription_update_minutes">%1$d 分钟前</string>
+    <string name="bottomsheet_subscription_update_today">今日 %1$s</string>
+    <string name="bottomsheet_subscription_update_yesterday">昨日 %1$s</string>
     <string name="common_yesterday_time">昨天 %1$s</string>
     <string name="bottomsheet_subscription_upload">上传</string>
     <string name="bottomsheet_subscription_download">下载</string>
@@ -731,4 +803,92 @@
 
     <string name="bottomsheet_release_type_prerelease">预发布版</string>
     <string name="bottomsheet_release_type_stable">稳定版</string>
+
+    <!-- 监控守护设置 -->
+    <string name="monitor_title">监控与守护</string>
+    <string name="monitor_subtitle">看门狗、定时重启与日志</string>
+    <string name="monitor_section_network_watchdog">网络看门狗</string>
+    <string name="monitor_network_watchdog_enable">网络看门狗</string>
+    <string name="monitor_network_watchdog_enable_subtitle">监控网络连通性，失败时自动重启</string>
+    <string name="monitor_network_check_interval">检查间隔（秒）</string>
+    <string name="monitor_network_check_interval_subtitle">最小 10 秒</string>
+    <string name="monitor_network_watchdog_timeout">失败阈值</string>
+    <string name="monitor_network_watchdog_timeout_subtitle">连续失败次数达到后重启</string>
+    <string name="monitor_network_test_host">测试目标 URL</string>
+    <string name="monitor_network_test_host_subtitle">用于连通性检测的 HTTP 端点</string>
+    <string name="monitor_section_cpu_watchdog">CPU 看门狗</string>
+    <string name="monitor_cpu_watchdog_enable">CPU 看门狗</string>
+    <string name="monitor_cpu_watchdog_enable_subtitle">CPU 使用率超限时重启核心</string>
+    <string name="monitor_cpu_watchdog_threshold">CPU 阈值（%）</string>
+    <string name="monitor_cpu_watchdog_threshold_subtitle">CPU 使用率百分比</string>
+    <string name="monitor_cpu_watchdog_duration">持续时间（秒）</string>
+    <string name="monitor_cpu_watchdog_duration_subtitle">超限持续时长后重启</string>
+    <string name="monitor_section_scheduled_restart">定时重启</string>
+    <string name="monitor_scheduled_restart_enable">定时重启</string>
+    <string name="monitor_scheduled_restart_enable_subtitle">按 cron 计划定时重启核心</string>
+    <string name="monitor_scheduled_restart_cron">Cron 表达式</string>
+    <string name="monitor_scheduled_restart_cron_subtitle">例如 0 3 * * *（每天凌晨 3 点）</string>
+    <string name="monitor_section_logging">日志与清理</string>
+    <string name="monitor_log_level">日志输出过滤</string>
+    <string name="monitor_log_level_all">全部</string>
+    <string name="monitor_log_level_warning">警告</string>
+    <string name="monitor_log_level_error">错误</string>
+    <string name="monitor_log_level_none">无</string>
+    <string name="monitor_clear_restart_log">清理重启日志</string>
+    <string name="monitor_clear_restart_log_subtitle">每次写入后清空 restart.log</string>
+    <string name="monitor_clean_gfw_rules">清理 GFW 规则</string>
+    <string name="monitor_clean_gfw_rules_subtitle">启动时清理系统注入的防火墙 REJECT 规则</string>
+    <string name="monitor_cron_daily_3am">每天凌晨 3 点</string>
+    <string name="monitor_cron_daily_4am">每天凌晨 4 点</string>
+    <string name="monitor_cron_every_6h">每 6 小时</string>
+    <string name="monitor_cron_every_12h">每 12 小时</string>
+    <string name="monitor_cron_weekly_mon">每周一凌晨 3 点</string>
+    <string name="monitor_cron_custom">自定义</string>
+    <string name="monitor_section_download">下载设置</string>
+    <string name="monitor_github_token">GitHub 访问令牌</string>
+    <string name="monitor_github_token_subtitle">GitHub API 个人访问令牌</string>
+
+    <!-- SmartDNS -->
+    <string name="smartdns_entry_subtitle">DNS 服务管理与 WebUI</string>
+    <string name="smartdns_not_installed">SmartDNS 模块未安装</string>
+    <string name="smartdns_section_status">服务状态</string>
+    <string name="smartdns_status_running">运行中</string>
+    <string name="smartdns_status_stopped">已停止</string>
+    <string name="smartdns_action_start">启动</string>
+    <string name="smartdns_action_stop">停止</string>
+    <string name="smartdns_action_restart">重启</string>
+    <string name="smartdns_webui_open">打开 WebUI</string>
+    <string name="smartdns_webui_user">用户名</string>
+    <string name="smartdns_webui_password">密码</string>
+    <string name="smartdns_section_config">配置管理</string>
+    <string name="smartdns_config_dns">DNS 配置</string>
+    <string name="smartdns_config_module">模块设置</string>
+    <string name="smartdns_section_settings">模块设置</string>
+    <string name="smartdns_auto_run">开机自启</string>
+    <string name="smartdns_auto_run_subtitle">开机时自动启动 SmartDNS</string>
+    <string name="smartdns_oom_protect">OOM 保护</string>
+    <string name="smartdns_oom_protect_subtitle">防止系统因内存不足杀死 SmartDNS</string>
+    <string name="smartdns_rule_auto_update">自动更新规则</string>
+    <string name="smartdns_rule_auto_update_subtitle">每天 %1$s 自动更新</string>
+    <string name="smartdns_update_rules_now">立即更新规则</string>
+    <string name="smartdns_update_rules_now_subtitle">下载并应用最新规则</string>
+    <string name="smartdns_section_logs">最近日志</string>
+    <string name="smartdns_no_logs">无日志内容</string>
+    <string name="smartdns_home_subtitle_running">运行中</string>
+    <string name="smartdns_home_subtitle_stopped">已停止</string>
+
+    <!-- SmartDNS 配置编辑器 -->
+    <string name="sdns_config_tab_visual">可视化</string>
+    <string name="sdns_config_tab_code">代码</string>
+    <string name="sdns_section_bind">监听</string>
+    <string name="sdns_section_log">日志</string>
+    <string name="sdns_section_cache">缓存</string>
+    <string name="sdns_section_prefetch">预取与过期缓存</string>
+    <string name="sdns_section_speed">速度检查</string>
+    <string name="sdns_section_servers">DNS 服务器</string>
+    <string name="sdns_force_aaaa_soa_desc">禁用 IPv6 AAAA 记录</string>
+    <string name="sdns_no_servers">暂无服务器配置</string>
+    <string name="sdns_servers_edit_hint">切换到代码模式编辑服务器配置</string>
+    <string name="sdns_setting_section_startup">启动与性能</string>
+    <string name="sdns_setting_section_rules">规则自动更新</string>
 </resources>

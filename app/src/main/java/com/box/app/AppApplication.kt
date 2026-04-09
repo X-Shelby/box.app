@@ -8,6 +8,7 @@ import com.box.app.utils.LatencyTargetsManager
 import com.box.app.utils.UpdateCheckManager
 import com.box.app.utils.UiScaleManager
 import com.box.app.utils.buildAppIconImageLoader
+import com.box.app.ui.web.WebViewPreloader
 import android.content.Context
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
@@ -17,16 +18,24 @@ import io.github.rosemoe.sora.langs.textmate.registry.ThemeRegistry
 import io.github.rosemoe.sora.langs.textmate.registry.model.ThemeModel
 import io.github.rosemoe.sora.langs.textmate.registry.provider.AssetsFileResolver
 import org.eclipse.tm4e.core.registry.IThemeSource
+import com.topjohnwu.superuser.Shell
 
 class AppApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         appContext = applicationContext
+        Shell.enableVerboseLogging = BuildConfig.DEBUG
+        Shell.setDefaultBuilder(
+            Shell.Builder.create()
+                .setFlags(Shell.FLAG_MOUNT_MASTER)
+                .setTimeout(12)
+        )
         ThemeManager.init(this)
         LanguageManager.init(this)
         LatencyTargetsManager.init(this)
         UiScaleManager.init(this)
         UpdateCheckManager.start(this)
+        WebViewPreloader.preload(this)
         initTextMate()
     }
 

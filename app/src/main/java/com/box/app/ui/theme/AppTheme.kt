@@ -1,33 +1,36 @@
 package com.box.app.ui.theme
 
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.os.Build
 import android.view.WindowManager
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.box.app.utils.SystemBarMode
 import com.box.app.utils.ThemeManager
+import top.yukonga.miuix.kmp.basic.Scaffold as MiuixScaffold
+import top.yukonga.miuix.kmp.theme.ColorSchemeMode
+import top.yukonga.miuix.kmp.theme.MiuixTheme
+import top.yukonga.miuix.kmp.theme.ThemeController
+import top.yukonga.miuix.kmp.theme.darkColorScheme as miuixDarkColorScheme
+import top.yukonga.miuix.kmp.theme.lightColorScheme as miuixLightColorScheme
 
 data class AppColors(
     val pageBg: Color,
@@ -40,70 +43,57 @@ data class AppColors(
 
 @Composable
 fun appColors(): AppColors {
-    val isDark = ThemeManager.shouldUseDarkTheme()
-    val trueBlack by ThemeManager.trueBlack.collectAsState()
-    
-    return if (isDark) {
-        AppColors(
-            pageBg = if (trueBlack) Color.Black else Color(0xFF0A0C0F),
-            card = Color(0xFF1C1F26),
-            cardAlt = Color(0xFF252930),
-            divider = Color.White.copy(alpha = 0.09f),
-            textPrimary = Color(0xFFF5F7FA),
-            textSecondary = Color(0xFFB4BCC8)
-        )
-    } else {
-        AppColors(
-            pageBg = Color(0xFFF6F8FA),
-            card = Color(0xFFFFFFFF),
-            cardAlt = Color(0xFFF1F3F5),
-            divider = Color.Black.copy(alpha = 0.07f),
-            textPrimary = Color(0xFF0D1117),
-            textSecondary = Color(0xFF57606A)
-        )
-    }
+    val scheme = MiuixTheme.colorScheme
+    return AppColors(
+        pageBg = scheme.background,
+        card = scheme.surfaceContainer,
+        cardAlt = scheme.surfaceContainerHigh,
+        divider = scheme.dividerLine,
+        textPrimary = scheme.onSurface,
+        textSecondary = scheme.onSurfaceSecondary
+    )
 }
 
 @Composable
 fun AppTheme(
     content: @Composable () -> Unit
 ) {
-    val c = appColors()
+    val themeMode by ThemeManager.themeMode.collectAsState()
     val isDark = ThemeManager.shouldUseDarkTheme()
     val systemBarSettings by ThemeManager.systemBarSettings.collectAsState()
-    
-    val scheme = if (isDark) {
-        darkColorScheme(
-            primary = Color(0xFF58A6FF),
-            onPrimary = Color(0xFF000000),
-            primaryContainer = Color(0xFF1F6FEB),
-            onPrimaryContainer = Color(0xFFFFFFFF),
-            background = c.pageBg,
-            surface = c.card,
-            surfaceVariant = c.cardAlt,
-            onBackground = c.textPrimary,
-            onSurface = c.textPrimary,
-            onSurfaceVariant = c.textSecondary,
-            outline = c.divider
-        )
-    } else {
-        lightColorScheme(
-            primary = Color(0xFF0969DA),
-            onPrimary = Color(0xFFFFFFFF),
-            primaryContainer = Color(0xFF6CB6FF),
-            onPrimaryContainer = Color(0xFF000000),
-            background = c.pageBg,
-            surface = c.card,
-            surfaceVariant = c.cardAlt,
-            onBackground = c.textPrimary,
-            onSurface = c.textPrimary,
-            onSurfaceVariant = c.textSecondary,
-            outline = c.divider
+
+    val trueBlack by ThemeManager.trueBlack.collectAsState()
+
+    val lightColors = remember { miuixLightColorScheme() }
+
+    val darkColors = remember(trueBlack) {
+        if (trueBlack) {
+            miuixDarkColorScheme().copy(
+                background = Color.Black,
+                surface = Color.Black
+            )
+        } else {
+            miuixDarkColorScheme()
+        }
+    }
+
+    val controller = remember(themeMode, isDark, lightColors, darkColors, trueBlack) {
+        ThemeController(
+            colorSchemeMode = when (themeMode) {
+                com.box.app.utils.ThemeMode.LIGHT -> ColorSchemeMode.Light
+                com.box.app.utils.ThemeMode.DARK -> ColorSchemeMode.Dark
+                com.box.app.utils.ThemeMode.SYSTEM -> ColorSchemeMode.System
+            },
+            lightColors = lightColors,
+            darkColors = darkColors,
+            isDark = isDark
         )
     }
 
-    MaterialTheme(colorScheme = scheme) {
+    top.yukonga.miuix.kmp.theme.MiuixTheme(controller = controller) {
+        val c = appColors()
         val view = LocalView.current
+
         SideEffect {
             val activity = view.context.findActivity() ?: return@SideEffect
             val window = activity.window
@@ -115,23 +105,22 @@ fun AppTheme(
             window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
 
             WindowCompat.setDecorFitsSystemWindows(window, false)
-            
-            // Apply system bar settings
+
             val statusBarColor = when (systemBarSettings.statusBar) {
-                com.box.app.utils.SystemBarMode.TRANSPARENT -> android.graphics.Color.TRANSPARENT
-                com.box.app.utils.SystemBarMode.OPAQUE -> c.pageBg.toArgb()
+                SystemBarMode.TRANSPARENT -> android.graphics.Color.TRANSPARENT
+                SystemBarMode.OPAQUE -> c.pageBg.toArgb()
             }
-            
+
             val navigationBarColor = when (systemBarSettings.navigationBar) {
-                com.box.app.utils.SystemBarMode.TRANSPARENT -> android.graphics.Color.TRANSPARENT
-                com.box.app.utils.SystemBarMode.OPAQUE -> c.pageBg.toArgb()
+                SystemBarMode.TRANSPARENT -> android.graphics.Color.TRANSPARENT
+                SystemBarMode.OPAQUE -> c.pageBg.toArgb()
             }
-            
+
             @Suppress("DEPRECATION")
             window.statusBarColor = statusBarColor
             @Suppress("DEPRECATION")
             window.navigationBarColor = navigationBarColor
-            
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 @Suppress("DEPRECATION")
                 window.isStatusBarContrastEnforced = false
@@ -147,22 +136,29 @@ fun AppTheme(
 
         val contentModifier = Modifier
             .then(
-                if (systemBarSettings.statusBar == com.box.app.utils.SystemBarMode.OPAQUE) {
+                if (systemBarSettings.statusBar == SystemBarMode.OPAQUE) {
                     Modifier.windowInsetsPadding(WindowInsets.statusBars)
                 } else {
                     Modifier
                 }
             )
             .then(
-                if (systemBarSettings.navigationBar == com.box.app.utils.SystemBarMode.OPAQUE) {
+                if (systemBarSettings.navigationBar == SystemBarMode.OPAQUE) {
                     Modifier.windowInsetsPadding(WindowInsets.navigationBars)
                 } else {
                     Modifier
                 }
             )
 
-        Surface(modifier = Modifier.fillMaxSize(), color = c.pageBg) {
-            Box(modifier = contentModifier.fillMaxSize()) {
+        MiuixScaffold(
+            modifier = Modifier.fillMaxSize(),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        ) { paddingValues ->
+            Box(
+                modifier = contentModifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
                 content()
             }
         }
@@ -178,18 +174,11 @@ private fun Context.findActivity(): Activity? {
     return null
 }
 
-// Additional helper functions for compatibility
 @Composable
-fun appAccentColor(): Color {
-    val isDark = ThemeManager.shouldUseDarkTheme()
-    return if (isDark) Color(0xFF6CB6FF) else Color(0xFF0969DA)
-}
+fun appAccentColor(): Color = MiuixTheme.colorScheme.primary
 
 @Composable
-fun appErrorColor(): Color {
-    val isDark = ThemeManager.shouldUseDarkTheme()
-    return if (isDark) Color(0xFFFF6B6B) else Color(0xFFB42318)
-}
+fun appErrorColor(): Color = MiuixTheme.colorScheme.error
 
 @Composable
 fun isDark() = ThemeManager.shouldUseDarkTheme()

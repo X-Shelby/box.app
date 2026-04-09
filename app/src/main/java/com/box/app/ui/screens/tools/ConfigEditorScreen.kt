@@ -35,7 +35,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -332,7 +332,7 @@ fun ConfigEditorScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(c.pageBg)
+            
     ) {
         Column(
             modifier = Modifier
@@ -381,7 +381,7 @@ fun ConfigEditorScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(c.pageBg),
+                                ,
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
@@ -391,7 +391,7 @@ fun ConfigEditorScreen(
                                 CircularProgressIndicator(color = accent)
                                 Text(
                                     text = "Loading file...",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    style = MiuixTheme.textStyles.body2,
                                     color = c.textSecondary
                                 )
                             }
@@ -425,7 +425,7 @@ fun ConfigEditorScreen(
                             Text(
                                 text = stringResource(R.string.tools_config_back_compact),
                                 color = c.textPrimary,
-                                style = MaterialTheme.typography.labelLarge,
+                                style = MiuixTheme.textStyles.button,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -548,7 +548,7 @@ fun ConfigEditorScreen(
                                         if (searchQuery.isBlank()) {
                                             Text(
                                                 text = stringResource(R.string.config_editor_search_hint),
-                                                style = MaterialTheme.typography.labelLarge,
+                                                style = MiuixTheme.textStyles.button,
                                                 color = c.textSecondary,
                                                 modifier = Modifier.align(Alignment.CenterStart)
                                             )
@@ -565,8 +565,8 @@ fun ConfigEditorScreen(
                                                 cursorBrush = SolidColor(accent),
                                                 textStyle = TextStyle(
                                                     color = c.textPrimary,
-                                                    fontSize = MaterialTheme.typography.labelLarge.fontSize,
-                                                    fontWeight = MaterialTheme.typography.labelLarge.fontWeight
+                                                    fontSize = MiuixTheme.textStyles.button.fontSize,
+                                                    fontWeight = MiuixTheme.textStyles.button.fontWeight
                                                 ),
                                                 modifier = Modifier
                                                     .weight(1f)
@@ -606,7 +606,7 @@ fun ConfigEditorScreen(
                                                 Spacer(modifier = Modifier.width(8.dp))
                                                 Text(
                                                     text = counter,
-                                                    style = MaterialTheme.typography.labelMedium,
+                                                    style = MiuixTheme.textStyles.footnote1,
                                                     color = c.textSecondary
                                                 )
                                             }
@@ -723,7 +723,7 @@ private fun PillTextField(
                     Text(
                         text = placeholder,
                         color = c.textSecondary,
-                        style = MaterialTheme.typography.labelLarge
+                        style = MiuixTheme.textStyles.button
                     )
                 }
                 CompositionLocalProvider(LocalTextSelectionColors provides selectionColors) {
@@ -734,7 +734,7 @@ private fun PillTextField(
                         cursorBrush = SolidColor(cursorColor),
                         textStyle = TextStyle(
                             color = c.textPrimary,
-                            fontSize = MaterialTheme.typography.labelLarge.fontSize
+                            fontSize = MiuixTheme.textStyles.button.fontSize
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -745,7 +745,7 @@ private fun PillTextField(
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
                     text = trailingText,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MiuixTheme.textStyles.footnote1,
                     color = c.textSecondary
                 )
             }
@@ -835,7 +835,7 @@ private fun SolidPillButton(
             Text(
                 text = text,
                 color = if (enabled) c.textPrimary else c.textSecondary,
-                style = MaterialTheme.typography.labelLarge
+                style = MiuixTheme.textStyles.button
             )
         }
     }

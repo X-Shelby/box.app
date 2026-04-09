@@ -1,26 +1,35 @@
 package com.box.app.ui.screens
 
-import androidx.compose.animation.core.tween
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.foundation.lazy.LazyListState
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import com.box.app.BuildConfig
 import com.box.app.ui.components.LocalFloatingNavBarSpaceDp
+import com.box.app.ui.effect.navigationCancelSpec
+import com.box.app.ui.effect.navigationPredictiveBackProgress
+import com.box.app.ui.effect.navigationPopSpec
+import com.box.app.ui.effect.navigationPushSpec
+import com.box.app.ui.effect.navigationSceneProgress
 import androidx.compose.ui.unit.dp
+import com.box.app.ui.effect.androidRenderBlur
+import com.box.app.ui.effect.supportsAndroidRenderBlur
 import com.box.app.ui.screens.tools.ToolsRootScreen
 import kotlinx.coroutines.launch
 import com.box.app.ui.screens.tools.ToolsConfigScreen
@@ -29,6 +38,9 @@ import com.box.app.ui.screens.tools.ToolsLogsScreen
 import com.box.app.ui.screens.tools.ToolsNetworkControlScreen
 import com.box.app.ui.screens.tools.ToolsUpdateSubscriptionScreen
 import com.box.app.ui.screens.tools.ToolsUpdateCnipScreen
+import com.box.app.ui.screens.tools.MonitorSettingsScreen
+import com.box.app.ui.screens.tools.SmartDnsConfigScreen
+import com.box.app.ui.screens.tools.SmartDnsScreen
 
 private enum class ToolsRoute {
     Root,
@@ -38,7 +50,10 @@ private enum class ToolsRoute {
     NetworkControl,
     Logs,
     UpdateSubscription,
-    UpdateCnip
+    UpdateCnip,
+    MonitorSettings,
+    SmartDns,
+    SmartDnsConfig
 }
 
 @Composable
@@ -59,13 +74,16 @@ fun ToolsScreen(
     openLogsFromHome: Boolean = false,
     onExitLogsToHome: () -> Unit = {},
     openUpdateSubscriptionFromHome: Boolean = false,
-    onExitUpdateSubscriptionToHome: () -> Unit = {}
+    onExitUpdateSubscriptionToHome: () -> Unit = {},
+    onOpenSmartDnsWebUi: () -> Unit = {}
 ) {
     var route by rememberSaveable {
         mutableStateOf(savedRouteName?.let { name ->
             runCatching { ToolsRoute.valueOf(name) }.getOrNull() ?: ToolsRoute.Root
         } ?: ToolsRoute.Root)
     }
+    // SmartDNS 配置编辑器需要的文件路径参数
+    var smartDnsConfigPath by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(resetToRootRequest) {
         if (resetToRootRequest <= 0) return@LaunchedEffect
@@ -135,9 +153,9 @@ fun ToolsScreen(
     LaunchedEffect(route) {
         if (route != ToolsRoute.Root) {
             lastNonRootRoute = route
-            transition.animateTo(1f, animationSpec = tween(durationMillis = 280))
+            transition.animateTo(1f, animationSpec = navigationPushSpec())
         } else {
-            transition.animateTo(0f, animationSpec = tween(durationMillis = 260))
+            transition.animateTo(0f, animationSpec = navigationPopSpec())
         }
     }
 
@@ -146,12 +164,12 @@ fun ToolsScreen(
                 progress: kotlinx.coroutines.flow.Flow<androidx.activity.BackEventCompat> ->
             try {
                 progress.collect { backEvent ->
-                    transition.snapTo((1f - backEvent.progress).coerceIn(0f, 1f))
+                    transition.snapTo(navigationPredictiveBackProgress(backEvent.progress))
                 }
                 exitToRoot()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 scope.launch {
-                    transition.animateTo(1f, animationSpec = tween(durationMillis = 220))
+                    transition.animateTo(1f, animationSpec = navigationCancelSpec())
                 }
                 throw e
             }
@@ -164,6 +182,8 @@ fun ToolsScreen(
         else -> null
     }
 
+    val toolsBlurSupported = remember { supportsAndroidRenderBlur() }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -171,17 +191,23 @@ fun ToolsScreen(
     ) {
         val w = containerWidthPx
         val t = transition.value
-
-        val mainX = if (w > 0f) (-w / 3f) * t else 0f
-        val subX = if (w > 0f) w * (1f - t) else 0f
+        val easedT = navigationSceneProgress(t)
+        val mainOffsetX = if (w > 0f) (-w * 0.18f) * easedT else 0f
+        val mainScale = 1f - 0.05f * easedT
+        val subX = if (w > 0f) w * (1f - easedT) else 0f
 
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .graphicsLayer {
-                    translationX = mainX
-                    alpha = 1f
+                    translationX = mainOffsetX
+                    scaleX = mainScale
+                    scaleY = mainScale
                 }
+                .androidRenderBlur(
+                    radius = (40f * t).coerceAtMost(40f),
+                    enabled = toolsBlurSupported && t > 0.02f
+                )
         ) {
             ToolsRootScreen(
                 onNavVisibilityChange = onNavVisibilityChange,
@@ -196,18 +222,39 @@ fun ToolsScreen(
                     if (BuildConfig.FLAVOR != "bfr") {
                         route = ToolsRoute.UpdateCnip
                     }
-                }
+                },
+                onOpenMonitorSettings = { route = ToolsRoute.MonitorSettings },
+                onOpenSmartDns = { route = ToolsRoute.SmartDns }
             )
         }
 
         if (activeRoute != null && (t > 0f || route != ToolsRoute.Root)) {
+            // 模糊遮罩
+            if (toolsBlurSupported && t > 0.02f) {
+                val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+                val dimColor = if (isDark) Color.Black.copy(alpha = 0.35f * t)
+                    else Color(0xFF606060).copy(alpha = 0.12f * t)
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(dimColor)
+                )
+            } else if (t > 0.01f) {
+                val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+                val fallbackAlpha = if (isDark) 0.35f * t else 0.18f * t
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { alpha = fallbackAlpha }
+                        .background(if (isDark) Color.Black else Color.Gray)
+                )
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .graphicsLayer {
-                        translationX = subX
-                        alpha = t
-                    }
+                    .graphicsLayer { translationX = subX }
+                    .background(MiuixTheme.colorScheme.surface)
             ) {
                 CompositionLocalProvider(LocalFloatingNavBarSpaceDp provides 0.dp) {
                     when (activeRoute) {
@@ -258,7 +305,9 @@ fun ToolsScreen(
                                     onOpenNetworkControl = { route = ToolsRoute.NetworkControl },
                                     onOpenLogs = { route = ToolsRoute.Logs },
                                     onOpenUpdateSubscription = { route = ToolsRoute.UpdateSubscription },
-                                    onOpenUpdateCnip = { }
+                                    onOpenUpdateCnip = { },
+                                    onOpenMonitorSettings = { route = ToolsRoute.MonitorSettings },
+                                    onOpenSmartDns = { route = ToolsRoute.SmartDns }
                                 )
                             } else {
                                 ToolsUpdateCnipScreen(
@@ -267,6 +316,27 @@ fun ToolsScreen(
                                 )
                             }
                         }
+
+                        ToolsRoute.MonitorSettings -> MonitorSettingsScreen(
+                            onNavVisibilityChange = onNavVisibilityChange,
+                            onBack = { exitToRoot() }
+                        )
+
+                        ToolsRoute.SmartDns -> SmartDnsScreen(
+                            onNavVisibilityChange = onNavVisibilityChange,
+                            onBack = { exitToRoot() },
+                            onOpenConfigEditor = { path ->
+                                smartDnsConfigPath = path
+                                route = ToolsRoute.SmartDnsConfig
+                            },
+                            onOpenWebUi = onOpenSmartDnsWebUi
+                        )
+
+                        ToolsRoute.SmartDnsConfig -> SmartDnsConfigScreen(
+                            filePath = smartDnsConfigPath,
+                            onNavVisibilityChange = onNavVisibilityChange,
+                            onBack = { route = ToolsRoute.SmartDns }
+                        )
 
                         else -> Unit
                     }

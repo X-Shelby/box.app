@@ -1,0 +1,3 @@
+[submodule "libs/hyperx-compose"]
+	path = libs/hyperx-compose
+	url = https://github.com/MiChongs/hyperx-compose.git

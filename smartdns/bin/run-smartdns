@@ -1,0 +1,14 @@
+#!/bin/sh
+
+CWD=$(pwd)
+SMARTDNS_BIN="/data/adb/smartdns/bin/smartdns"
+LIB_DIR="/data/adb/smartdns/bin/lib"
+INTERPRETER="${LIB_DIR}/ld-musl-aarch64.so.1"
+
+if [ ! -f "${INTERPRETER}" ]; then
+    echo "smartdns dynamic loader not found: ${INTERPRETER}"
+    exit 1
+fi
+
+export LD_LIBRARY_PATH="${LIB_DIR}"
+SMARTDNS_WORKDIR="$CWD" exec -a "smartdns" "${INTERPRETER}" "${SMARTDNS_BIN}" $@

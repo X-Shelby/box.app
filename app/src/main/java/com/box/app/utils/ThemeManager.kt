@@ -38,6 +38,9 @@ object ThemeManager {
     private const val KEY_LIQUID_GLASS_LENS_STRENGTH = "liquid_glass_lens_strength"
     private const val KEY_BOTTOM_SHEET_BLUR = "bottom_sheet_blur"
     private const val KEY_BLUR_EFFECTS_ENABLED = "blur_effects_enabled"
+    private const val KEY_LIQUID_GLASS_NAV_BAR = "liquid_glass_nav_bar"
+    private const val KEY_MAPLE_FONT_LOGS = "maple_font_logs"
+    private const val KEY_HYPERX_NAV_TRANSITIONS = "hyperx_nav_transitions"
 
     private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
     val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
@@ -68,6 +71,15 @@ object ThemeManager {
     private val _blurEffectsEnabled = MutableStateFlow(false)
     val blurEffectsEnabled: StateFlow<Boolean> = _blurEffectsEnabled.asStateFlow()
 
+    private val _liquidGlassNavBar = MutableStateFlow(false)
+    val liquidGlassNavBar: StateFlow<Boolean> = _liquidGlassNavBar.asStateFlow()
+
+    private val _mapleFontLogs = MutableStateFlow(false)
+    val mapleFontLogs: StateFlow<Boolean> = _mapleFontLogs.asStateFlow()
+
+    private val _hyperXNavTransitions = MutableStateFlow(false)
+    val hyperXNavTransitions: StateFlow<Boolean> = _hyperXNavTransitions.asStateFlow()
+
     fun init(context: Context) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val savedMode = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name)
@@ -79,6 +91,12 @@ object ThemeManager {
         _liquidGlassLensStrength.value = prefs.getFloat(KEY_LIQUID_GLASS_LENS_STRENGTH, 1f)
         _bottomSheetBlur.value = prefs.getBoolean(KEY_BOTTOM_SHEET_BLUR, true)
         _blurEffectsEnabled.value = prefs.getBoolean(KEY_BLUR_EFFECTS_ENABLED, false) && supportsBlurEffects()
+        _liquidGlassNavBar.value = prefs.getBoolean(KEY_LIQUID_GLASS_NAV_BAR, false) && supportsBlurEffects()
+        _mapleFontLogs.value = prefs.getBoolean(KEY_MAPLE_FONT_LOGS, false)
+        _hyperXNavTransitions.value = prefs.getBoolean(KEY_HYPERX_NAV_TRANSITIONS, false)
+        if (_mapleFontLogs.value) {
+            MapleFontManager.loadCachedFont(context)
+        }
         if (!supportsBlurEffects() && prefs.contains(KEY_BLUR_EFFECTS_ENABLED)) {
             prefs.edit().putBoolean(KEY_BLUR_EFFECTS_ENABLED, false).apply()
         }
@@ -142,11 +160,31 @@ object ThemeManager {
         prefs.edit().putBoolean(KEY_BOTTOM_SHEET_BLUR, enabled).apply()
     }
 
+    fun setLiquidGlassNavBar(context: Context, enabled: Boolean) {
+        val finalEnabled = enabled && supportsBlurEffects()
+        _liquidGlassNavBar.value = finalEnabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_LIQUID_GLASS_NAV_BAR, finalEnabled).apply()
+    }
+
     fun setBlurEffectsEnabled(context: Context, enabled: Boolean) {
         val finalEnabled = enabled && supportsBlurEffects()
         _blurEffectsEnabled.value = finalEnabled
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().putBoolean(KEY_BLUR_EFFECTS_ENABLED, finalEnabled).apply()
+    }
+
+    fun setMapleFontLogs(context: Context, enabled: Boolean) {
+        _mapleFontLogs.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_MAPLE_FONT_LOGS, enabled).apply()
+        // 关闭时仅切换状态，保留缓存文件，避免重复下载
+    }
+
+    fun setHyperXNavTransitions(context: Context, enabled: Boolean) {
+        _hyperXNavTransitions.value = enabled
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(KEY_HYPERX_NAV_TRANSITIONS, enabled).apply()
     }
 
     fun supportsBlurEffects(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S

@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.MaterialTheme
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -158,7 +158,7 @@ fun FloatingPillNavBar(
                 animationScope.launch {
                     offsetAnimation.animateTo(
                         0f,
-                        spring(1f, 300f, 0.5f)
+                        spring(0.82f, 200f, 0.3f)
                     )
                 }
                 if (pagerBusyNow) return@DampedDragAnimation
@@ -195,7 +195,7 @@ fun FloatingPillNavBar(
             animationScope.launch {
                 offsetAnimation.animateTo(
                     0f,
-                    spring(1f, 300f, 0.5f)
+                    spring(0.82f, 200f, 0.3f)
                 )
             }
         }
@@ -520,7 +520,7 @@ private fun RowScope.TabItem(
         Text(
             text = label,
             color = fg,
-            style = MaterialTheme.typography.labelMedium,
+            style = MiuixTheme.textStyles.footnote1,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             modifier = Modifier.padding(top = 2.dp)
         )

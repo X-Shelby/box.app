@@ -11,11 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -25,11 +20,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.box.app.R
+import com.box.app.ui.miuix.HyperDialog
 import com.box.app.ui.theme.appAccentColor
 import com.box.app.ui.theme.appColors
 import com.box.app.utils.AppLanguage
 import com.box.app.utils.LanguageManager
 import com.kyant.shapes.RoundedRectangle
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
 fun LanguageSelectionDialog(
@@ -37,21 +36,13 @@ fun LanguageSelectionDialog(
     onDismiss: () -> Unit,
     onSelect: (AppLanguage) -> Unit
 ) {
-    val c = appColors()
-
-    AlertDialog(
+    HyperDialog(
+        show = true,
         onDismissRequest = onDismiss,
-        containerColor = c.card,
-        tonalElevation = 0.dp,
-        title = {
-            Text(
-                text = stringResource(R.string.settings_language_title),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = c.textPrimary
-            )
-        },
-        text = {
+        title = stringResource(R.string.settings_language_title),
+        confirmText = stringResource(R.string.action_cancel),
+        onConfirm = onDismiss,
+        content = {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -63,11 +54,6 @@ fun LanguageSelectionDialog(
                         onClick = { onSelect(lang) }
                     )
                 }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(text = stringResource(R.string.action_cancel), color = c.textPrimary)
             }
         }
     )
@@ -108,7 +94,7 @@ private fun LanguageOptionItem(
                     AppLanguage.ENGLISH -> stringResource(R.string.settings_language_english)
                     AppLanguage.CHINESE -> stringResource(R.string.settings_language_chinese)
                 },
-                style = MaterialTheme.typography.titleSmall,
+                style = MiuixTheme.textStyles.subtitle,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                 color = c.textPrimary
             )

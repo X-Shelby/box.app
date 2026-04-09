@@ -83,7 +83,8 @@ object HomeRepository {
     private var lastNetSample: ProcSampler.NetSample? = null
     private var lastCpuTimes: ProcSampler.CpuTimes? = null
     private var lastProcessCpuTimeJiffies: Long = 0L
-    private var lastProcessCpuSampleTimeMs: Long = 0L
+    private var lastSystemCpuTotal: Long = 0L
+    private var numCpuCores: Int = 0
 
     private const val NET_HISTORY_MAX_POINTS = 60
 
@@ -109,6 +110,7 @@ object HomeRepository {
     private var cachedCoreDisplayName: String = "-"
     private var cachedNetworkMode: String = "-"
     private var cachedIpv6Text: String = "-"
+    private var cachedDnsMode: String = "-"
 
     @Volatile
     private var lastNotifiedServiceStatus: ServiceStatus? = null
@@ -510,7 +512,7 @@ object HomeRepository {
 
             while (isActive) {
                 runCatching { refreshNetSpeedOnce() }
-                delay(2_000)
+                delay(1_000)
             }
         }
     }
@@ -534,13 +536,17 @@ object HomeRepository {
 
         if (pid == null) {
             lastProcessCpuTimeJiffies = 0L
-            lastProcessCpuSampleTimeMs = 0L
+            lastSystemCpuTotal = 0L
             updateMetrics { it.copy(cpu = "CPU -", ram = "RAM -") }
             return
         }
 
         val sep = "\n---SEP---\n"
         val cmd = """
+            nproc 2>/dev/null || echo '1'
+            echo '$sep'
+            head -n 1 /proc/stat 2>/dev/null
+            echo '$sep'
             cat /proc/$pid/stat 2>/dev/null | head -n 1
             echo '$sep'
             grep '^VmRSS:' /proc/$pid/status 2>/dev/null | head -n 1
@@ -550,35 +556,55 @@ object HomeRepository {
         val res = ShellExecutor.execute(cmd)
         if (res.exitCode != 0 || res.stdout.isBlank()) {
             lastProcessCpuTimeJiffies = 0L
-            lastProcessCpuSampleTimeMs = 0L
+            lastSystemCpuTotal = 0L
             updateMetrics { it.copy(cpu = "CPU -", ram = "RAM -") }
             return
         }
 
         val parts = res.stdout.split(sep)
-        val statLine = parts.getOrNull(0)?.trim().orEmpty()
-        val rssLine = parts.getOrNull(1)?.trim().orEmpty()
-        val ussLines = parts.getOrNull(2)?.trim().orEmpty()
+        val nprocLine = parts.getOrNull(0)?.trim().orEmpty()
+        val sysCpuLine = parts.getOrNull(1)?.trim().orEmpty()
+        val statLine = parts.getOrNull(2)?.trim().orEmpty()
+        val rssLine = parts.getOrNull(3)?.trim().orEmpty()
+        val ussLines = parts.getOrNull(4)?.trim().orEmpty()
+
+        // 缓存 CPU 核心数（运行期间不变）
+        if (numCpuCores <= 0) {
+            numCpuCores = nprocLine.toIntOrNull()?.coerceAtLeast(1) ?: 1
+        }
+
+        // 解析系统 CPU 总 jiffies（/proc/stat 首行 "cpu ..." 各字段之和）
+        val sysCpuTotal = sysCpuLine.split(Regex("\\s+"))
+            .drop(1) // 跳过 "cpu" 标签
+            .mapNotNull { it.toLongOrNull() }
+            .sum()
 
         var cpuText = "CPU -"
         run {
-            val sp = statLine.split(Regex("\\s+"))
-            if (sp.size > 16) {
-                val utime = sp[13].toLongOrNull() ?: 0L
-                val stime = sp[14].toLongOrNull() ?: 0L
-                val cutime = sp[15].toLongOrNull() ?: 0L
-                val cstime = sp[16].toLongOrNull() ?: 0L
-                val total = utime + stime + cutime + cstime
+            // comm 字段（括号内进程名）可含空格，以最后一个 ')' 定位后续字段
+            val closeParen = statLine.lastIndexOf(')')
+            if (closeParen < 0) return@run
+            val fields = statLine.substring(closeParen + 1).trim().split(Regex("\\s+"))
+            // 偏移: state(0) ppid(1) … utime(11) stime(12) cutime(13) cstime(14)
+            if (fields.size > 14) {
+                val utime = fields[11].toLongOrNull() ?: 0L
+                val stime = fields[12].toLongOrNull() ?: 0L
+                val cutime = fields[13].toLongOrNull() ?: 0L
+                val cstime = fields[14].toLongOrNull() ?: 0L
+                val processTotal = utime + stime + cutime + cstime
 
-                val now = System.currentTimeMillis()
-                if (lastProcessCpuTimeJiffies != 0L && lastProcessCpuSampleTimeMs != 0L) {
-                    val cpuDiff = (total - lastProcessCpuTimeJiffies).coerceAtLeast(0L)
-                    val timeDiffMs = (now - lastProcessCpuSampleTimeMs).coerceAtLeast(1L)
-                    val usage = 100.0 * (cpuDiff / 100.0) / (timeDiffMs / 1000.0)
-                    cpuText = String.format("CPU %.1f%%", usage.coerceIn(0.0, 100.0))
+                if (lastProcessCpuTimeJiffies != 0L && lastSystemCpuTotal != 0L
+                    && sysCpuTotal > lastSystemCpuTotal
+                ) {
+                    val cpuDiff = (processTotal - lastProcessCpuTimeJiffies).coerceAtLeast(0L)
+                    val sysDiff = sysCpuTotal - lastSystemCpuTotal
+                    val cores = numCpuCores.coerceAtLeast(1)
+                    // 单核百分比：与 top 默认行为一致，100% = 占满一个核心
+                    val usage = cpuDiff.toDouble() / sysDiff * cores * 100.0
+                    cpuText = String.format("CPU %.1f%%", usage.coerceAtLeast(0.0))
                 }
-                lastProcessCpuTimeJiffies = total
-                lastProcessCpuSampleTimeMs = now
+                lastProcessCpuTimeJiffies = processTotal
+                lastSystemCpuTotal = sysCpuTotal
             }
         }
 
@@ -587,33 +613,19 @@ object HomeRepository {
             val sp = rssLine.split(Regex("\\s+"))
             val rssKb = sp.getOrNull(1)?.toLongOrNull()
             var pssKb: Long? = null
-            var ussKb: Long? = null
             if (ussLines.isNotBlank()) {
-                val pssMatch = Regex("^Pss:\\s+(\\d+)\\s+kB$", RegexOption.MULTILINE)
+                pssKb = Regex("^Pss:\\s+(\\d+)\\s+kB$", RegexOption.MULTILINE)
                     .find(ussLines)
                     ?.groupValues
                     ?.getOrNull(1)
                     ?.toLongOrNull()
-                if (pssMatch != null && pssMatch > 0L) pssKb = pssMatch
-
-                val privateCleanKb = Regex("^Private_Clean:\\s+(\\d+)\\s+kB$", RegexOption.MULTILINE)
-                    .find(ussLines)
-                    ?.groupValues
-                    ?.getOrNull(1)
-                    ?.toLongOrNull()
-                val privateDirtyKb = Regex("^Private_Dirty:\\s+(\\d+)\\s+kB$", RegexOption.MULTILINE)
-                    .find(ussLines)
-                    ?.groupValues
-                    ?.getOrNull(1)
-                    ?.toLongOrNull()
-                val totalPrivate = (privateCleanKb ?: 0L) + (privateDirtyKb ?: 0L)
-                if (totalPrivate > 0L) ussKb = totalPrivate
+                    ?.takeIf { it > 0L }
             }
 
-            // Home card RAM should represent PSS; fall back to RSS if PSS isn't available.
+            // PSS（按比例分摊共享页）最能反映进程真实内存占用；RSS 作为兜底
             val displayKb = pssKb ?: rssKb
             if (displayKb != null) {
-                ramText = "RAM ${displayKb / 1024}MB"
+                ramText = String.format("RAM %.1fMB", displayKb / 1024.0)
             }
         }
 
@@ -946,7 +958,7 @@ object HomeRepository {
         if (shellWarmed) return
         shellWarmed = true
         runCatching {
-            // First `su` spawn is the slowest part; create multiple sessions early for concurrency.
+            // Prime libsu's cached shell early to reduce the first root action latency.
             ShellExecutor.warmUpRootShell(minSessions = 1)
             ShellExecutor.execute("id -u 2>/dev/null")
         }
@@ -1102,6 +1114,7 @@ object HomeRepository {
                 cachedCoreDisplayName = "-"
                 cachedNetworkMode = "-"
                 cachedIpv6Text = "-"
+                cachedDnsMode = "-"
                 val next = HomeServiceState(
                     env = env,
                     status = ServiceStatus.Stopped,
@@ -1109,7 +1122,8 @@ object HomeRepository {
                     uptimeText = "-",
                     coreDisplayName = "-",
                     networkMode = "-",
-                    ipv6Text = "-"
+                    ipv6Text = "-",
+                    dnsMode = "-"
                 )
                 if (next != current) _serviceState.value = next
                 return@withLock
@@ -1160,7 +1174,8 @@ object HomeRepository {
                 uptimeText = if (pid != null) uptime else "-",
                 coreDisplayName = if (pid != null) cachedCoreDisplayName else "—",
                 networkMode = if (pid != null) cachedNetworkMode else "—",
-                ipv6Text = if (pid != null) cachedIpv6Text else "—"
+                ipv6Text = if (pid != null) cachedIpv6Text else "—",
+                dnsMode = if (pid != null) cachedDnsMode else "—"
             )
             if (next != current) _serviceState.value = next
         }
@@ -1175,6 +1190,7 @@ object HomeRepository {
             cachedCoreDisplayName = "-"
             cachedNetworkMode = "-"
             cachedIpv6Text = "-"
+            cachedDnsMode = "-"
             return
         }
 
@@ -1215,6 +1231,37 @@ object HomeRepository {
             false -> "false"
             else -> "-"
         }
+
+        // DNS 模式 (fakeip / redir-host)
+        cachedDnsMode = runCatching {
+            val coreName = cachedCoreDisplayName.split("-").firstOrNull() ?: cachedCoreDisplayName
+            val configFileKey = when (coreName) {
+                "mihomo" -> "name_mihomo_config"
+                "clash" -> "name_clash_config"
+                "sing" -> "name_sing_config"
+                else -> "name_${coreName}_config"
+            }
+            val configFile = findSetting(settings, configFileKey)?.takeIf { it.isNotBlank() } ?: return@runCatching "-"
+            val binName = findSetting(settings, "bin_name")?.trim() ?: return@runCatching "-"
+            val configPath = "/data/adb/box/$binName/$configFile"
+            when {
+                binName == "mihomo" || binName == "clash" -> {
+                    val res = ShellExecutor.execute("grep -m1 'enhanced-mode' '$configPath' 2>/dev/null")
+                    val line = res.stdout.trim()
+                    when {
+                        line.contains("fake-ip", ignoreCase = true) -> "fake-ip"
+                        line.contains("redir-host", ignoreCase = true) -> "redir-host"
+                        else -> "-"
+                    }
+                }
+                binName == "sing-box" -> {
+                    val res = ShellExecutor.execute("cat '$configPath' 2>/dev/null")
+                    val text = res.stdout
+                    if (text.contains("\"fakeip\"", ignoreCase = true)) "fakeip" else "normal"
+                }
+                else -> "-"
+            }
+        }.getOrDefault("-")
 
         lastSettingsAtMs = now
     }

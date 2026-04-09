@@ -2,6 +2,8 @@ package com.box.app.data.backend
 
 import com.box.app.BuildConfig
 import com.box.app.data.model.LatencyResult
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -39,7 +41,9 @@ internal object HomeMetricsApi {
 
     suspend fun getLanIpInfo(): LanIpInfo {
         return try {
-            val ifaces = NetworkInterface.getNetworkInterfaces() ?: return LanIpInfo(ip = "-", iface = "-")
+            val ifaces = withContext(Dispatchers.IO) {
+                NetworkInterface.getNetworkInterfaces()
+            } ?: return LanIpInfo(ip = "-", iface = "-")
             for (iface in ifaces.toList()) {
                 if (!iface.isUp || iface.isLoopback) continue
                 val ip = iface.inetAddresses.toList()
@@ -166,7 +170,7 @@ internal object HomeMetricsApi {
         }
 
         // filename="..."
-        val standardPattern = """filename=\"([^\"]+)\""".toRegex(RegexOption.IGNORE_CASE)
+        val standardPattern = """filename=["]([^"]+)["]""".toRegex(RegexOption.IGNORE_CASE)
         val standardMatch = standardPattern.find(contentDisposition)
         if (standardMatch != null) return standardMatch.groupValues[1].trim().takeIf { it.isNotBlank() }
 
@@ -257,18 +261,18 @@ internal object HomeMetricsApi {
                 if (code !in 200..299) return null
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
                 val json = JSONObject(body)
-                val asnValue = json.opt("asn")
+                val location = json.optJSONObject("location")
+                val asnObj = json.optJSONObject("asn")
+                val company = json.optJSONObject("company")
                 PublicGeoIpInfo(
                     ip = json.optString("ip", "-").ifBlank { "-" },
-                    country = json.optString("country", "-").ifBlank { "-" },
-                    countryCode = json.optString("country_code", "-").ifBlank { "-" }.uppercase(Locale.getDefault()),
-                    asn = when (asnValue) {
-                        null -> "-"
-                        is Number -> asnValue.toLong().toString()
-                        else -> asnValue.toString().ifBlank { "-" }
-                    },
-                    asnOrganization = json.optString("asn_organization", "-").ifBlank { "-" },
-                    isp = json.optString("isp", "-").ifBlank { "-" }
+                    country = location?.optString("country", "-")?.ifBlank { "-" } ?: "-",
+                    countryCode = (location?.optString("country_code", "-")?.ifBlank { "-" } ?: "-")
+                        .uppercase(Locale.getDefault()),
+                    asn = asnObj?.optLong("asn", 0L)
+                        ?.takeIf { it != 0L }?.toString() ?: "-",
+                    asnOrganization = asnObj?.optString("org", "-")?.ifBlank { "-" } ?: "-",
+                    isp = company?.optString("name", "-")?.ifBlank { "-" } ?: "-"
                 )
             } finally {
                 conn.disconnect()
@@ -278,9 +282,45 @@ internal object HomeMetricsApi {
         }
     }
 
-    suspend fun getPublicGeoIp(isIpv6: Boolean): PublicGeoIpInfo? {
-        val endpoint = if (isIpv6) "https://api-ipv6.ip.sb/geoip" else "https://api-ipv4.ip.sb/geoip"
-        return fetchPublicGeoIp(endpoint)
+    /**
+     * 通过 api-ipv6.ip.sb 探测设备 IPv6 地址。
+     * 仅返回 IP 字符串；无 IPv6 连通性时返回 null。
+     */
+    private fun probeIpv6Address(): String? {
+        return try {
+            val conn = (URL("https://api-ipv6.ip.sb/geoip").openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 5000
+                readTimeout = 5000
+                instanceFollowRedirects = true
+                setRequestProperty("User-Agent", "BoxApp/Android")
+            }
+            try {
+                if (conn.responseCode !in 200..299) return null
+                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                val ip = JSONObject(body).optString("ip", "").trim()
+                // 必须包含 ':' 才是真正的 IPv6 地址；返回 IPv4 说明无 IPv6 连通性
+                ip.takeIf { it.contains(':') }
+            } finally {
+                conn.disconnect()
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * 获取公网 IP 地理信息。
+     * - IPv4：直接请求 ipapi.is（自动返回 IPv4）
+     * - IPv6：先通过 ip.sb 探测 IPv6 地址，再用 ipapi.is/?q= 查询详情
+     */
+    suspend fun getPublicGeoIp(isIpv6: Boolean = false): PublicGeoIpInfo? {
+        return if (isIpv6) {
+            val ipv6Addr = probeIpv6Address() ?: return null
+            fetchPublicGeoIp("https://api.ipapi.is/?q=$ipv6Addr")
+        } else {
+            fetchPublicGeoIp("https://api.ipapi.is/")
+        }
     }
 
     suspend fun getPublicIp(): Pair<String, String> {
@@ -289,7 +329,7 @@ internal object HomeMetricsApi {
     }
 
     suspend fun getPublicIpSummary(): PublicIpSummary {
-        val info = fetchPublicGeoIp("https://api-ipv4.ip.sb/geoip")
+        val info = fetchPublicGeoIp("https://api.ipapi.is/")
         return if (info != null) {
             PublicIpSummary(
                 ip = info.ip,
