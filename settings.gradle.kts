@@ -21,7 +21,15 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven("https://jitpack.io")
+        maven("https://jitpack.io") {
+            credentials {
+                username = providers.gradleProperty("authToken").orNull
+                password = ""
+            }
+            content {
+                includeGroup("com.github.MiChongs")
+            }
+        }
         maven("https://maven.aliyun.com/repository/public")
     }
 }
