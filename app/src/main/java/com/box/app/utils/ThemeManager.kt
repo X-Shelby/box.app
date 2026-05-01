@@ -85,7 +85,11 @@ object ThemeManager {
     private val _mapleFontEditor = MutableStateFlow(false)
     val mapleFontEditor: StateFlow<Boolean> = _mapleFontEditor.asStateFlow()
 
-    private val _hyperXNavTransitions = MutableStateFlow(false)
+    // HyperX 导航转场：**强制开启且不可关闭**（运行时常量）
+    // 关闭后走的自定义 Animatable 路径在祖先 graphicsLayer 包裹下会让 ThemedWebView
+    // 渲染异常（黑洞 / 不刷新），且 HyperX NavDisplay 自身已经是项目期望的转场体验。
+    // 因此本 flag 固定为 true：UI 中已移除开关项，[setHyperXNavTransitions] 退化为 no-op。
+    private val _hyperXNavTransitions = MutableStateFlow(true)
     val hyperXNavTransitions: StateFlow<Boolean> = _hyperXNavTransitions.asStateFlow()
 
     private val _monetEnabled = MutableStateFlow(false)
@@ -114,7 +118,8 @@ object ThemeManager {
         _liquidGlassNavBar.value = prefs.getBoolean(KEY_LIQUID_GLASS_NAV_BAR, false) && supportsBlurEffects()
         _mapleFontLogs.value = prefs.getBoolean(KEY_MAPLE_FONT_LOGS, false)
         _mapleFontEditor.value = prefs.getBoolean(KEY_MAPLE_FONT_EDITOR, false)
-        _hyperXNavTransitions.value = prefs.getBoolean(KEY_HYPERX_NAV_TRANSITIONS, false)
+        // 强制开启：忽略 prefs 中的旧值。即便历史用户偏好为 false 也无视，避免被关闭。
+        _hyperXNavTransitions.value = true
         _monetEnabled.value = prefs.getBoolean(KEY_MONET_ENABLED, false)
         _keyColor.value = prefs.getInt(KEY_KEY_COLOR, 0)
         _paletteStyle.value = prefs.getString(KEY_PALETTE_STYLE, "TonalSpot") ?: "TonalSpot"
@@ -212,10 +217,13 @@ object ThemeManager {
         prefs.edit().putBoolean(KEY_MAPLE_FONT_EDITOR, enabled).apply()
     }
 
+    /**
+     * No-op：HyperX 导航转场强制常开，本方法保留签名仅为兼容历史调用方。
+     * 任何写入意图都被静默忽略，状态值始终为 true。
+     */
+    @Suppress("UNUSED_PARAMETER")
     fun setHyperXNavTransitions(context: Context, enabled: Boolean) {
-        _hyperXNavTransitions.value = enabled
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(KEY_HYPERX_NAV_TRANSITIONS, enabled).apply()
+        // intentionally no-op
     }
 
     fun setMonetEnabled(context: Context, enabled: Boolean) {

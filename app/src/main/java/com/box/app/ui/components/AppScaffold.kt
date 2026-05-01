@@ -21,18 +21,20 @@ import dev.lackluster.hyperx.ui.animation.HyperXNavTransitions
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Scaffold
+import dev.lackluster.hyperx.ui.layout.HyperXLayoutConfig
+import dev.lackluster.hyperx.ui.layout.HyperXScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -50,6 +52,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -73,8 +76,17 @@ import top.yukonga.miuix.kmp.icon.extended.All
 import top.yukonga.miuix.kmp.icon.extended.Settings
 import top.yukonga.miuix.kmp.icon.extended.Sidebar
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.drawBackdrop
+import com.kyant.backdrop.effects.blur
+import dev.lackluster.hyperx.ui.effect.rememberBlurBackdrop
+import top.yukonga.miuix.kmp.blur.BlendColorEntry
+import top.yukonga.miuix.kmp.blur.BlurColors
+import top.yukonga.miuix.kmp.blur.LayerBackdrop as MiuixLayerBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
+import top.yukonga.miuix.kmp.blur.textureBlur
 import top.yukonga.miuix.kmp.basic.NavigationBar as MiuixNavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem as MiuixNavigationBarItem
 import com.box.app.ui.screens.HomeScreen
@@ -211,7 +223,9 @@ enum class AppScreen : NavKey {
     ToolsLogs,
     ToolsUpdateSubscription,
     NetSpeed,
-    SubscriptionDetail
+    SubscriptionDetail,
+    BaseProxyConfig,
+    LatencyTargets
 }
 
 fun MainTab.index(): Int = when (this) {
@@ -261,6 +275,11 @@ fun AppScaffold() {
 
     val uiBackdrop = key(backdropVersion) { rememberLayerBackdrop() }
     val contentBackdrop = key(backdropVersion) { rememberLayerBackdrop() }
+    // miuix 风格 NavBar 模糊源（与 HyperXScaffold 同款）：在内容层用 miuix.layerBackdrop
+    // 注册采样区，NavBar 通过 miuix.textureBlur 进行真正的 miuix blur 渲染
+    val miuixNavBackdrop: MiuixLayerBackdrop? = key(backdropVersion) {
+        rememberBlurBackdrop(MiuixTheme.colorScheme.surface)
+    }
     val navBlurSupported = remember { supportsAndroidRenderBlur() }
     val isDarkTheme = ThemeManager.shouldUseDarkTheme()
     val useHyperXNav by ThemeManager.hyperXNavTransitions.collectAsState()
@@ -436,8 +455,8 @@ fun AppScaffold() {
             context.startActivity(intent)
         }
         DisposableEffect(lifecycleOwner) {
-            val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME) {
                     val done = appPrefs.getBoolean("onboarding_completed", false)
                     if (done) {
                         onboardingCompleted = true
@@ -466,17 +485,64 @@ fun AppScaffold() {
     val mainAlpha = enterP
     val mainScale = 0.92f + 0.08f * enterP
 
+    // ── 应用根布局：项目版 AppHyperXLayout（对接 AppTheme，剥离了库版 HyperXTheme） ──
+    // 通过 [AppHyperXLayout] 统一注入：
+    //   - LocalHyperXLayoutConfig（跟随设置项的磨砂开关 → 解决"模糊内容不正确"）
+    //   - LocalNavigator         （HyperXPage 默认返回按钮可调用）
+    //   - LocalLayoutPadding     （HyperXPage 内部用于内容左右内边距）
+    //   - LocalPageMode          （Normal/LargeScreen → FULL_SCREEN）
+    //   - MiuixPopupUtils.MiuixPopupHost（库内弹层宿主）
+    //
+    // 关键：禁用 split-screen。AppScaffold 是含 HorizontalPager + 自管理子页面动画的
+    // 完整应用骨架，被 split 模式劈成左右两半会破坏导航语义。
+    val blurEffectsActiveForApp = ThemeManager.shouldUseBlurEffects()
+    val hyperXLayoutConfig = remember(blurEffectsActiveForApp) {
+        HyperXLayoutConfig(
+            isBlurEnabled = blurEffectsActiveForApp,
+            isSplitScreenEnabled = false
+        )
+    }
+
+    AppHyperXLayout(config = hyperXLayoutConfig) {
     Box(modifier = Modifier.fillMaxSize()) {
         // OOBE 进行中：主内容不渲染（DefaultActivity 在最上层覆盖）
         if (showOnboarding) return@Box
 
+        // ── 底部导航条：作为 outer Box 的 overlay 渲染（兄弟节点，不进 Scaffold.bottomBar）
+        //   旧设计的根本错误：把 nav 塞进 HyperXScaffold.bottomBar slot → Scaffold 按 nav
+        //   测量高度为 body 预留空间。AnimatedVisibility 即便把 nav 测量到 0，过渡帧仍
+        //   会出现「内容尚未填满 / Scaffold 渲染顺序」造成的底部空白黑块。
+        //   正确做法：HyperXScaffold 不带 bottomBar，body 始终 fillMaxSize；nav 用
+        //   `Modifier.align(BottomCenter) + graphicsLayer { translationY = ... }` 单独
+        //   悬浮在内容之上，hide 时仅做视觉位移，不收缩布局，因此底部永远是内容自身，
+        //   彻底没有黑块。
+        val useLiquidGlassNav by ThemeManager.liquidGlassNavBar.collectAsState()
+
+        HyperXScaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
+            contentWindowInsets = WindowInsets(0, 0, 0, 0)
+        ) { _ ->
+        // ── WebView 兼容修复（subpage 内的 ThemedWebView 渲染异常） ──
+        // 这个 Box 是「主内容 + subpage」的共同祖先；之前永久挂着 OOBE 入场动画的
+        // graphicsLayer。即便 OOBE 完成（mainAlpha == 1f && mainScale == 1f，transform
+        // 为 identity），graphicsLayer wrapper 仍把整个子树包成离屏 RenderNode，导致
+        // subpage 内 AndroidView 嵌入的 WebView 渲染黑洞 / 不刷新。
+        // 修复：仅在 OOBE 动画进行中挂 graphicsLayer，动画完成后退出 RenderNode 包裹路径。
+        val needsOobeAnimLayer = mainAlpha < 0.999f || mainScale < 0.999f
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer {
-                    alpha = mainAlpha
-                    scaleX = mainScale
-                    scaleY = mainScale
+                .let {
+                    if (needsOobeAnimLayer) {
+                        it.graphicsLayer {
+                            alpha = mainAlpha
+                            scaleX = mainScale
+                            scaleY = mainScale
+                        }
+                    } else {
+                        it
+                    }
                 }
                 .onSizeChanged {
                     appScreenContainerWidthPx = it.width.toFloat()
@@ -519,18 +585,12 @@ fun AppScaffold() {
                             enabled = navBlurSupported && combinedBlurRadius > 0.1f
                         )
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            
-                            .layerBackdrop(uiBackdrop)
-                    )
 
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            
                             .layerBackdrop(contentBackdrop)
+                            .let { if (miuixNavBackdrop != null) it.miuixLayerBackdrop(miuixNavBackdrop) else it }
                     ) {
                         CompositionLocalProvider(
                             LocalFloatingNavBarSpaceDp provides mainFloatingNavSpaceDp,
@@ -552,7 +612,9 @@ fun AppScaffold() {
                                                 onOpenSubStore = { openSubpage(AppScreen.SubStore) },
                                                 onOpenNetSpeed = { openSubpage(AppScreen.NetSpeed) },
                                                 onOpenSmartDns = { openSubpage(AppScreen.SmartDnsWebUi) },
-                                                onOpenSubscriptionDetail = { openSubpage(AppScreen.SubscriptionDetail) }
+                                                onOpenSubscriptionDetail = { openSubpage(AppScreen.SubscriptionDetail) },
+                                                onOpenBaseProxyConfig = { openSubpage(AppScreen.BaseProxyConfig) },
+                                                onOpenLatencyTargets = { openSubpage(AppScreen.LatencyTargets) }
                                             )
                                         }
                                     }
@@ -660,7 +722,18 @@ fun AppScaffold() {
                         @Suppress("UNCHECKED_CAST")
                         val screen = key as? AppScreen ?: AppScreen.Main
                         NavEntry(key) {
-                            if (screen == AppScreen.Main) return@NavEntry
+                            // ── pop 返回不闪白修复 ──
+                            // 之前这里用 `return@NavEntry` 空内容。pop 转场需要"主页面"
+                            // NavEntry 作为滑入目标，空 lambda 让 NavDisplay 的合成层失去
+                            // 落点：subpage 被 dispose 的瞬间，NavDisplay 容器没有任何
+                            // 子节点托底 → 露出 surface（亮色主题为白色） → "突然变白"。
+                            // 修复：渲染一个**透明** fillMaxSize Box 作为 Main 占位，转场
+                            // 期间露出背后的 HorizontalPager 主内容，subpage 平滑滑出。
+                            // 真正的主内容仍由外层 HorizontalPager 在 NavDisplay 之外渲染。
+                            if (screen == AppScreen.Main) {
+                                Box(modifier = Modifier.fillMaxSize())
+                                return@NavEntry
+                            }
                             val subpageSystemNavInsetDp = if (
                                 systemBarSettings.navigationBar == SystemBarMode.TRANSPARENT &&
                                 screen != AppScreen.Panel &&
@@ -790,12 +863,20 @@ fun AppScaffold() {
                     )
                 }
 
+                // ── WebView 兼容修复 ──
+                // 之前用 `.graphicsLayer { translationX = subX }` 推动 subpage 滑入，
+                // 即便完全展开 (subX == 0f) graphicsLayer 仍创建一层 RenderNode wrapper，
+                // AndroidView 内嵌的 WebView 在硬件加速合成路径下被强制走离屏 RenderNode，
+                // 导致渲染黑洞 / 不刷新 / 错位（Panel/SubStore/SmartDnsWebUi 三页都是 webview）。
+                //
+                // 改为 Modifier.offset { IntOffset(...) }：位移发生在 layout 阶段，**不**创建
+                // graphicsLayer / RenderNode wrapper，AndroidView 子节点不被强制离屏渲染，
+                // WebView 渲染路径与无转场时完全一致；视觉等价于原 graphicsLayer translationX。
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .graphicsLayer { translationX = subX }
+                        .offset { androidx.compose.ui.unit.IntOffset(subX.roundToInt(), 0) }
                         .background(MiuixTheme.colorScheme.surface)
-                        
                 ) {
                     CompositionLocalProvider(
                         LocalFloatingNavBarSpaceDp provides 0.dp,
@@ -838,6 +919,12 @@ fun AppScaffold() {
                                     }
                                 }
                             )
+                            AppScreen.BaseProxyConfig -> com.box.app.ui.screens.BaseProxyConfigScreen(
+                                onBack = { exitSubpage() }
+                            )
+                            AppScreen.LatencyTargets -> com.box.app.ui.screens.LatencyTargetsScreen(
+                                onBack = { exitSubpage() }
+                            )
                             else -> Unit
                         }
                     }
@@ -846,79 +933,185 @@ fun AppScaffold() {
         }
         } // if (!useHyperXNav)
 
-        val navBarsInsetPx = WindowInsets.navigationBars.getBottom(density).toFloat()
-        val extraHidePx = with(density) { 24.dp.toPx() }
-        val navHiddenOffsetPx = remember(navBarMeasuredHeightPx, navBarsInsetPx, extraHidePx) {
-            val basePx = if (navBarMeasuredHeightPx > 0) navBarMeasuredHeightPx.toFloat() else with(density) { 120.dp.toPx() }
-            basePx + navBarsInsetPx + extraHidePx
-        }
+        }  // close HyperXScaffold content lambda
 
-        val navOffsetYPx by animateFloatAsState(
-            targetValue = if (navVisible && currentScreen == AppScreen.Main && mainTabAtRoot) 0f else navHiddenOffsetPx,
-            animationSpec = tween(durationMillis = 380, easing = FastOutSlowInEasing),
-            label = "nav_offset_y"
+        // ── 底部导航悬浮层（outer Box 的兄弟节点 / overlay 模式）
+        //   - hide：仅 translationY 视觉位移，不影响布局 → 内容始终铺满到屏幕底，无黑块
+        //   - 液态玻璃模式 → FloatingPillNavBar（自带 backdrop 模糊）
+        //   - 普通模式 → MiuixNavigationBar 透明 + 当全局磨砂启用时套 textureBlur 玻璃层
+        AppScaffoldBottomNavOverlay(
+            mainPagerState = mainPagerState,
+            contentBackdrop = contentBackdrop,
+            miuixNavBackdrop = miuixNavBackdrop,
+            systemNavInsetDp = systemNavInsetDp,
+            density = density,
+            navBarMeasuredHeightPx = navBarMeasuredHeightPx,
+            onMeasured = { navBarMeasuredHeightPx = it },
+            navVisible = navVisible,
+            currentScreen = currentScreen,
+            mainTabAtRoot = mainTabAtRoot,
+            useLiquidGlassNav = useLiquidGlassNav,
+            blurEffectsActive = blurEffectsActiveForApp,
+            context = context,
+            boxScope = this
         )
+    }
+    } // close AppHyperXLayout primaryContent
+}
 
-        // 底栏：液态玻璃 vs 标准
-        val useLiquidGlassNav by ThemeManager.liquidGlassNavBar.collectAsState()
+/**
+ * 底部导航悬浮层（overlay 模式 — 设计要点）
+ *
+ * 这是**重新设计**的底部导航；它彻底解决了之前几版的"隐藏时出现底部黑块"问题。
+ *
+ * 旧设计（错误）：
+ *   nav 放在 HyperXScaffold.bottomBar slot → Scaffold 用 nav 的测量高度为 body 预留
+ *   bottom 空间。AnimatedVisibility 把 nav 测量收缩到 0 也无法完全规避：
+ *     - 过渡帧间，body 与 bottomBar 之间出现尺寸不同步
+ *     - HyperXScaffold 的 containerColor / 透明度在中间形成可见的黑色矩形
+ *     - 取消 navOffsetYPx 视觉位移后，slide 动画与 layout 收缩不能完美同步
+ *
+ * 新设计（正确）：
+ *   - HyperXScaffold 不带 bottomBar，body 始终 fillMaxSize → 内容**永远**铺满到屏幕底部
+ *   - nav 作为 outer Box 的兄弟节点，用 `align(Alignment.BottomCenter)` 对齐底部
+ *   - hide 用 `Modifier.graphicsLayer { translationY = navOffsetYPx }`：
+ *       * 仅做视觉位移（绘制阶段），**不收缩布局**
+ *       * 隐藏时 nav 滑出屏幕外 → 屏幕底部直接显出 body 内容，没有任何空隙
+ *   - 切换液态玻璃 / 普通模式：AnimatedContent 形变动画
+ *   - 普通模式下，blur 通过 `Modifier.textureBlur(contentBackdrop, ...)` 直接挂在
+ *     navBar 容器上 — 这才是真正的「磨砂玻璃悬浮」结构（不再依赖 HyperXScaffold 的
+ *     bottomBar slot 机制）
+ */
+@Composable
+private fun AppScaffoldBottomNavOverlay(
+    mainPagerState: MainPagerState,
+    contentBackdrop: com.kyant.backdrop.backdrops.LayerBackdrop,
+    miuixNavBackdrop: MiuixLayerBackdrop?,
+    systemNavInsetDp: androidx.compose.ui.unit.Dp,
+    density: androidx.compose.ui.unit.Density,
+    navBarMeasuredHeightPx: Int,
+    onMeasured: (Int) -> Unit,
+    navVisible: Boolean,
+    currentScreen: AppScreen,
+    mainTabAtRoot: Boolean,
+    useLiquidGlassNav: Boolean,
+    blurEffectsActive: Boolean,
+    context: android.content.Context,
+    boxScope: androidx.compose.foundation.layout.BoxScope
+) = with(boxScope) {
+    // 隐藏目标：nav 完全滑出屏幕外（高度 + 系统底部 inset + 24dp 余量）
+    val navBarsInsetPx = WindowInsets.navigationBars.getBottom(density).toFloat()
+    val extraHidePx = with(density) { 24.dp.toPx() }
+    val navHiddenOffsetPx = remember(navBarMeasuredHeightPx, navBarsInsetPx, extraHidePx) {
+        val basePx = if (navBarMeasuredHeightPx > 0) navBarMeasuredHeightPx.toFloat()
+            else with(density) { 120.dp.toPx() }
+        basePx + navBarsInsetPx + extraHidePx
+    }
+    val isVisible = navVisible && currentScreen == AppScreen.Main && mainTabAtRoot
+    val navOffsetYPx by animateFloatAsState(
+        targetValue = if (isVisible) 0f else navHiddenOffsetPx,
+        animationSpec = tween(durationMillis = 380, easing = FastOutSlowInEasing),
+        label = "nav_offset_y"
+    )
 
-        androidx.compose.animation.AnimatedContent(
-            targetState = useLiquidGlassNav,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .onSizeChanged { navBarMeasuredHeightPx = it.height }
-                .graphicsLayer { translationY = navOffsetYPx },
-            transitionSpec = {
-                (androidx.compose.animation.fadeIn(
-                    animationSpec = tween(420, easing = FastOutSlowInEasing)
-                ) + androidx.compose.animation.scaleIn(
-                    initialScale = 0.94f,
-                    animationSpec = tween(420, easing = FastOutSlowInEasing)
-                )).togetherWith(
-                    androidx.compose.animation.fadeOut(
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
-                    ) + androidx.compose.animation.scaleOut(
-                        targetScale = 0.94f,
-                        animationSpec = tween(300, easing = FastOutSlowInEasing)
+    androidx.compose.animation.AnimatedContent(
+        targetState = useLiquidGlassNav,
+        modifier = Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .onSizeChanged { onMeasured(it.height) }
+            .graphicsLayer { translationY = navOffsetYPx },
+        transitionSpec = {
+            (androidx.compose.animation.fadeIn(
+                animationSpec = tween(420, easing = FastOutSlowInEasing)
+            ) + androidx.compose.animation.scaleIn(
+                initialScale = 0.94f,
+                animationSpec = tween(420, easing = FastOutSlowInEasing)
+            )).togetherWith(
+                androidx.compose.animation.fadeOut(
+                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                ) + androidx.compose.animation.scaleOut(
+                    targetScale = 0.94f,
+                    animationSpec = tween(300, easing = FastOutSlowInEasing)
+                )
+            ).using(
+                androidx.compose.animation.SizeTransform(clip = false)
+            )
+        },
+        label = "nav_bar_switch"
+    ) { liquidGlass ->
+        if (liquidGlass) {
+            FloatingPillNavBar(
+                mainPagerState = mainPagerState,
+                backdrop = contentBackdrop,
+                modifier = Modifier
+                    .padding(bottom = systemNavInsetDp)
+                    .padding(horizontal = 20.dp, vertical = 14.dp)
+            )
+        } else {
+            // 普通 MiuixNavigationBar 的两种模式：
+            //
+            // ① 开磨砂 (blurEffectsActive = true)：
+            //    - MiuixNavigationBar.color = Color.Transparent（不能挡住模糊层）
+            //    - 外层 Box 用 kyant 的 `Modifier.drawBackdrop(contentBackdrop, blur(...))`
+            //      真实采样主内容区像素并模糊，同时 onDrawSurface 涂 surface@0.55 玻璃 tint
+            //    - 这与 FloatingPillNavBar 共用同一 contentBackdrop，捕获内容是「主页面 +
+            //      子页面 + HorizontalPager 内容」的真实像素，绝不会再"模糊内容不正确"
+            //
+            // ② 关磨砂 (blurEffectsActive = false)：
+            //    - MiuixNavigationBar.color = MiuixTheme.colorScheme.surface（标准实色）
+            //    - 外层 Box 不叠加背景，避免双重涂色
+            val miuixSurface = MiuixTheme.colorScheme.surface
+            // ── miuix 原生 blur 路径 ──
+            // 与 HyperXScaffold 同款：当全局磨砂启用且 miuixNavBackdrop 可用时，NavBar 走
+            // `Modifier.textureBlur(backdrop, RectangleShape, blurRadius, BlurColors)`，让
+            // miuix 用其 RuntimeShader 实现真正的 HyperOS 风格毛玻璃 — 边缘自然消隐，无方框。
+            // 关 blur 时退化为实色 surface 容器。
+            val miuixBlurReady = blurEffectsActive && miuixNavBackdrop != null
+            val barColor = if (miuixBlurReady) Color.Transparent else miuixSurface
+            val barBlurRadiusPx = with(density) { 25.dp.toPx() }
+            val blurTintAlpha = if (ThemeManager.shouldUseDarkTheme()) 0.7f else 0.8f
+            val blurColors = remember(miuixSurface, blurTintAlpha) {
+                BlurColors(
+                    blendColors = listOf(BlendColorEntry(miuixSurface.copy(alpha = blurTintAlpha)))
+                )
+            }
+            val containerModifier = if (miuixBlurReady) {
+                Modifier
+                    .fillMaxWidth()
+                    .textureBlur(
+                        backdrop = miuixNavBackdrop,
+                        shape = RectangleShape,
+                        blurRadius = barBlurRadiusPx,
+                        colors = blurColors
                     )
-                ).using(
-                    androidx.compose.animation.SizeTransform(clip = false)
-                )
-            },
-            label = "nav_bar_switch"
-        ) { liquidGlass ->
-            if (liquidGlass) {
-                FloatingPillNavBar(
-                    mainPagerState = mainPagerState,
-                    backdrop = contentBackdrop,
-                    modifier = Modifier
-                        .padding(bottom = systemNavInsetDp)
-                        .padding(horizontal = 20.dp, vertical = 14.dp)
-                )
             } else {
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    MiuixNavigationBar(
-                        defaultWindowInsetsPadding = true
-                    ) {
-                        MiuixNavigationBarItem(
-                            selected = mainPagerState.selectedPage == 0,
-                            onClick = { mainPagerState.animateToPage(0) },
-                            icon = MiuixIcons.Sidebar,
-                            label = context.getString(R.string.main_tab_home)
-                        )
-                        MiuixNavigationBarItem(
-                            selected = mainPagerState.selectedPage == 1,
-                            onClick = { mainPagerState.animateToPage(1) },
-                            icon = MiuixIcons.All,
-                            label = context.getString(R.string.main_tab_tools)
-                        )
-                        MiuixNavigationBarItem(
-                            selected = mainPagerState.selectedPage == 2,
-                            onClick = { mainPagerState.animateToPage(2) },
-                            icon = MiuixIcons.Settings,
-                            label = context.getString(R.string.main_tab_settings)
-                        )
-                    }
+                Modifier.fillMaxWidth()
+            }
+            Box(modifier = containerModifier) {
+                MiuixNavigationBar(
+                    color = barColor,
+                    showDivider = true,
+                    defaultWindowInsetsPadding = true
+                ) {
+                    MiuixNavigationBarItem(
+                        selected = mainPagerState.selectedPage == 0,
+                        onClick = { mainPagerState.animateToPage(0) },
+                        icon = MiuixIcons.Sidebar,
+                        label = context.getString(R.string.main_tab_home)
+                    )
+                    MiuixNavigationBarItem(
+                        selected = mainPagerState.selectedPage == 1,
+                        onClick = { mainPagerState.animateToPage(1) },
+                        icon = MiuixIcons.All,
+                        label = context.getString(R.string.main_tab_tools)
+                    )
+                    MiuixNavigationBarItem(
+                        selected = mainPagerState.selectedPage == 2,
+                        onClick = { mainPagerState.animateToPage(2) },
+                        icon = MiuixIcons.Settings,
+                        label = context.getString(R.string.main_tab_settings)
+                    )
                 }
             }
         }
@@ -969,6 +1162,12 @@ private fun SubpageContent(
         AppScreen.SubscriptionDetail -> com.box.app.ui.screens.SubscriptionDetailScreen(
             onBack = onBack,
             onOpenToolsSubscription = onOpenToolsSubscription
+        )
+        AppScreen.BaseProxyConfig -> com.box.app.ui.screens.BaseProxyConfigScreen(
+            onBack = onBack
+        )
+        AppScreen.LatencyTargets -> com.box.app.ui.screens.LatencyTargetsScreen(
+            onBack = onBack
         )
         else -> Unit
     }

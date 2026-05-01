@@ -372,12 +372,8 @@ fun ThemeSettingsScreen(
                             }
                         }
                     )
-                    SwitchPreference(
-                        title = stringResource(R.string.settings_hyperx_nav_transitions),
-                        summary = stringResource(R.string.settings_hyperx_nav_transitions_subtitle),
-                        checked = hyperXNavEnabled,
-                        onCheckedChange = { ThemeManager.setHyperXNavTransitions(context, it) }
-                    )
+                    // HyperX 导航转场强制常开（运行时常量），原 SwitchPreference 已移除：
+                    // 关闭后的 Animatable 路径会让 ThemedWebView 在祖先 graphicsLayer 下渲染异常。
                 }
             }
 
