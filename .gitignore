@@ -39,6 +39,8 @@ output.json
 *.p12
 *.pem
 *.key
+keystore.properties
+/app/keystore.properties
 
 # Excluded reference repositories (per request)
 KernelSU-main/
