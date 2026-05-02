@@ -175,19 +175,26 @@ fun MetricCard(model: HomeCardModel, modifier: Modifier = Modifier) {
                         animationSpec = tween(durationMillis = 360),
                         label = "metric_value_${model.kind}"
                     )
-                    Text(
-                        text = model.value,
-                        style = if (model.kind == HomeMetricKind.Ip) {
-                            MiuixTheme.textStyles.title4
-                        } else {
-                            MiuixTheme.textStyles.title2
-                        },
-                        fontFamily = AppFonts.dataFamily,
-                        fontWeight = FontWeight.Medium,
-                        color = if (model.kind == HomeMetricKind.Ip) palette.valueColor else animatedValueColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    if (model.kind == HomeMetricKind.Ip) {
+                        // IP 是字符串展示（含点号 / 冒号），保留原 Text + ellipsis
+                        Text(
+                            text = model.value,
+                            style = MiuixTheme.textStyles.title4,
+                            fontFamily = AppFonts.dataFamily,
+                            fontWeight = FontWeight.Medium,
+                            color = palette.valueColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    } else {
+                        // 网速 / 订阅 / 系统 等动态数字 → 滚动动画
+                        RollingNumberText(
+                            text = model.value,
+                            style = MiuixTheme.textStyles.title2,
+                            color = animatedValueColor,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                     Spacer(modifier = Modifier.height(2.dp))
                     if (model.subtitle.isNotBlank()) {
                         Text(
@@ -465,13 +472,12 @@ private fun SpeedMetricCardContent(model: HomeCardModel) {
                     color = palette.supportingColor
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Text(
+                RollingNumberText(
                     text = upValue,
                     style = MiuixTheme.textStyles.body2,
-                    fontFamily = AppFonts.dataFamily,
-                    fontWeight = FontWeight.SemiBold,
                     color = MiuixTheme.colorScheme.onSurface,
-                    maxLines = 1
+                    fontWeight = FontWeight.SemiBold,
+                    enablePulse = false  // body2 小字 + 高频更新，不需脉冲
                 )
             }
             // 下行：label 左 + value 右
@@ -485,13 +491,12 @@ private fun SpeedMetricCardContent(model: HomeCardModel) {
                     color = palette.supportingColor
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                Text(
+                RollingNumberText(
                     text = downValue,
                     style = MiuixTheme.textStyles.body2,
-                    fontFamily = AppFonts.dataFamily,
-                    fontWeight = FontWeight.SemiBold,
                     color = MiuixTheme.colorScheme.onSurface,
-                    maxLines = 1
+                    fontWeight = FontWeight.SemiBold,
+                    enablePulse = false
                 )
             }
         }
@@ -720,14 +725,11 @@ private fun SubscriptionMetricCardContent(model: HomeCardModel) {
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text(
+                RollingNumberText(
                     text = model.value,
                     style = MiuixTheme.textStyles.title2,
-                    fontFamily = AppFonts.dataFamily,
-                    fontWeight = FontWeight.SemiBold,
                     color = MiuixTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    fontWeight = FontWeight.SemiBold
                 )
                 if (model.subtitle.isNotBlank()) {
                     Text(
@@ -1028,14 +1030,12 @@ private fun SystemMetricRow(
             color = labelColor
         )
         Spacer(modifier = Modifier.weight(1f))
-        Text(
+        RollingNumberText(
             text = value,
             style = MiuixTheme.textStyles.footnote2,
-            fontFamily = AppFonts.dataFamily,
-            fontWeight = FontWeight.SemiBold,
             color = valueColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            fontWeight = FontWeight.SemiBold,
+            enablePulse = false  // footnote 体量小字，避免脉冲叠加抖动
         )
     }
 }
@@ -1086,13 +1086,12 @@ private fun SystemMetricBar(
                 modifier = Modifier.weight(1f),
                 overflow = TextOverflow.Ellipsis
             )
-            Text(
+            RollingNumberText(
                 text = valueText,
                 style = MiuixTheme.textStyles.footnote1,
-                fontFamily = AppFonts.dataFamily,
-                fontWeight = FontWeight.Medium,
                 color = MiuixTheme.colorScheme.onSurface,
-                maxLines = 1
+                fontWeight = FontWeight.Medium,
+                enablePulse = false  // CPU/内存高频更新，footnote1 字号不脉冲
             )
             if (!rightHint.isNullOrBlank()) {
                 Spacer(modifier = Modifier.size(4.dp))
@@ -1362,7 +1361,7 @@ private fun metricPaletteForKind(
     val scheme = MiuixTheme.colorScheme
     val dark = ThemeManager.shouldUseDarkTheme()
     return MetricPalette(
-        containerColor = scheme.surfaceContainer,
+        containerColor = metricCardSemanticContainer(kind, isActive, dark),
         titleColor = scheme.onSurface,
         valueColor = when (kind) {
             HomeMetricKind.Service, HomeMetricKind.Latency -> accent
@@ -1375,6 +1374,38 @@ private fun metricPaletteForKind(
         badgeText = metricBadgeTextColor(kind, dark, isActive),
         progressTrack = scheme.surfaceContainerHighest
     )
+}
+
+// ── 卡片容器：Monet 语义染色（C2）──────────────────────────────────────────
+// 在 surfaceContainer 基础上叠加每种 kind 对应的语义色 tint，浓度低（5%-10%），
+// 视觉上"染色但不抢眼"；Monet ON 时跟随主题派生，OFF 时退化为预设色板。
+
+@Composable
+private fun metricCardSemanticContainer(
+    kind: HomeMetricKind,
+    isActive: Boolean,
+    dark: Boolean
+): Color {
+    val base = MiuixTheme.colorScheme.surfaceContainer
+    val tint = when (kind) {
+        // IP → info（蓝/secondary）
+        HomeMetricKind.Ip -> homeInfoColors().accent
+        // Speed → success（绿/primary）
+        HomeMetricKind.Speed -> homeSuccessColors().accent
+        // Subscription → warning（琥珀/tertiary）
+        HomeMetricKind.Subscription -> homeWarningColors().accent
+        // System → 活动时 success（运行 ✓），未活动 neutral
+        HomeMetricKind.System ->
+            if (isActive) homeSuccessColors().accent else homeNeutralColors().accent
+        // Service → success（运行）
+        HomeMetricKind.Service ->
+            if (isActive) homeSuccessColors().accent else homeNeutralColors().accent
+        // Latency → info
+        HomeMetricKind.Latency -> homeInfoColors().accent
+    }
+    // 浓度：深色多一点（避免太黯淡），浅色稍弱（避免抢戏）
+    val ratio = if (dark) 0.10f else 0.06f
+    return lerp(base, tint, ratio)
 }
 
 // ── Badge 颜色：统一从 MiuixTheme.colorScheme 派生 ─────────────────────────

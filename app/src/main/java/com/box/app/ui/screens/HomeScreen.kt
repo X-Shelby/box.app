@@ -75,6 +75,7 @@ import com.box.app.data.repo.HomeRepository
 import com.box.app.ui.components.bottomsheets.SheetBlurEffect
 import com.box.app.ui.components.bottomsheets.SystemBottomSheet
 import com.box.app.ui.components.contentPaddingWithNavBars
+import com.box.app.ui.components.home.EnterAnimateOnce
 import com.box.app.ui.components.home.HomeCardModel
 import com.box.app.ui.components.home.HomeHeader
 import com.box.app.ui.components.home.HomeHeroCard
@@ -481,9 +482,10 @@ fun HomeScreen(
         }
 
     // 根据屏幕可用高度（减去状态栏）决定布局密度
+    // 去除 SmallTitle 后改用"呼吸感间距"代替段标题视觉分隔（A2）
     val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
     val isCompact = screenHeightDp < 780.dp
-    val sectionGap = if (isCompact) 6.dp else 10.dp
+    val sectionGap = if (isCompact) 12.dp else 18.dp
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isMediumWidth = maxWidth >= 700.dp
@@ -525,26 +527,28 @@ fun HomeScreen(
                 ), verticalArrangement = Arrangement.spacedBy(sectionGap)
             ) {
                 item(key = "home_header") {
-                    HomeHeader(onEdit = { showHomeLayoutSheet = true })
+                    EnterAnimateOnce(delayMs = 0) {
+                        HomeHeader(onEdit = { showHomeLayoutSheet = true })
+                    }
                 }
-                sectionOrder.filter { it !in hiddenSections }.forEach { id ->
+                sectionOrder.filter { it !in hiddenSections }.forEachIndexed { sectionIdx, id ->
+                    // 入场延迟：每段错开 60ms 形成"瀑布"入场，最大 240ms 防过长等待
+                    val enterDelay = (60 + sectionIdx * 60).coerceAtMost(240)
                     when (id) {
                         "hero" -> item(key = "home_hero") {
-                            HomeHeroCard(
-                                serviceState = serviceState,
-                                onStart = { HomeRepository.startService() },
-                                onStop = { HomeRepository.stopService() },
-                                onReload = { HomeRepository.restartService() },
-                                onOpenBaseProxyConfig = onOpenBaseProxyConfig
-                            )
+                            EnterAnimateOnce(delayMs = enterDelay) {
+                                HomeHeroCard(
+                                    serviceState = serviceState,
+                                    onStart = { HomeRepository.startService() },
+                                    onStop = { HomeRepository.stopService() },
+                                    onReload = { HomeRepository.restartService() },
+                                    onOpenBaseProxyConfig = onOpenBaseProxyConfig
+                                )
+                            }
                         }
 
                         "quick" -> item(key = "home_quick") {
-                            Column(modifier = Modifier.fillMaxWidth()) {
-                                SmallTitle(
-                                    text = stringResource(R.string.home_layout_section_quick),
-                                    insideMargin = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
-                                )
+                            EnterAnimateOnce(delayMs = enterDelay) {
                                 HomeQuickActions(
                                     showSubStore = showSubStoreEntry,
                                     onOpenPanel = onOpenPanel,
@@ -557,7 +561,8 @@ fun HomeScreen(
                         }
 
                         "latency" -> item(key = "home_latency") {
-                            HomeLatencyCard(
+                            EnterAnimateOnce(delayMs = enterDelay) {
+                                HomeLatencyCard(
                                 label1 = latencyTargets.getOrNull(0)?.name
                                     ?: stringResource(R.string.home_latency_baidu),
                                 baidu = metricsState.latencyBaiduMs,
@@ -572,14 +577,12 @@ fun HomeScreen(
                                 onOpenTargets = onOpenLatencyTargets,
                                 compact = isCompact && !isMediumWidth
                             )
+                            }
                         }
 
                         "grid" -> item(key = "home_grid") {
+                            EnterAnimateOnce(delayMs = enterDelay) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                SmallTitle(
-                                    text = stringResource(R.string.home_layout_section_grid),
-                                    insideMargin = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
-                                )
                                 val metricModels =
                                     metricOrder.filter { it !in hiddenMetrics }.mapNotNull { mid ->
                                             when (mid) {
@@ -673,6 +676,7 @@ fun HomeScreen(
                                             }
                                         }
                                 HomeTwoColumnGrid(models = metricModels, columns = metricColumns)
+                            }
                             }
                         }
                     }

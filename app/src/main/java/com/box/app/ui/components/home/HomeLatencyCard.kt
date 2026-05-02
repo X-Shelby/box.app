@@ -1,19 +1,26 @@
 package com.box.app.ui.components.home
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,29 +35,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.box.app.R
-import com.box.app.ui.theme.AppFonts
 import com.kyant.shapes.Capsule
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.SmallTitle
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -66,12 +64,12 @@ private enum class LatencySeverity {
 /**
  * 延迟卡片 — 仿参考设计
  *
- * ┌─ SmallTitle「延迟」    状态 ● ↻─┐  ← 标题行（Card 外）
- * └─────────────────────────────────┘
- * ┌─────────────────────────────────┐  ← Card
- * │ Baidu ●    Cloudflare ●  Google ●│
- * │ -- ms       -- ms         -- ms  │
- * └─────────────────────────────────┘
+ * ┌──────────────  状态 ● ⚙ ↻ ─┐  ← 操作行（actions 靠右，无段标题）
+ * └─────────────────────────────┘
+ * ┌─────────────────────────────┐  ← Card
+ * │ Baidu ●  Cloudflare ●  Google ● │
+ * │ -- ms     -- ms         -- ms   │
+ * └─────────────────────────────┘
  */
 @Composable
 fun HomeLatencyCard(
@@ -101,17 +99,14 @@ fun HomeLatencyCard(
     )
 
     Column(modifier = modifier.fillMaxWidth()) {
-        // ── 标题行（Card 外部）──
+        // ── 操作行（无标题，actions 整体靠右）──
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End
         ) {
-            // SmallTitle 使用默认的 onBackgroundVariant 色；去掉默认 28dp 水平内边距，与卡片左缘对齐
-            SmallTitle(
-                text = stringResource(R.string.home_latency_title),
-                modifier = Modifier.weight(1f),
-                insideMargin = PaddingValues(horizontal = 0.dp, vertical = 8.dp)
-            )
             // 状态文字 + 状态点
             Text(
                 text = stringResource(badgeRes),
@@ -198,10 +193,11 @@ fun HomeLatencyCard(
  * └─────────────┘
  */
 /**
- * 延迟单元：
+ * 延迟单元（B1：呼吸点 + mini sparkline）：
  * ┌─────────────┐
- * │  ● Label    │  ← 状态点 + 名称（居中）
- * │   -- ms     │  ← 数值（居中，突出）
+ * │  ◉ Label    │  ← 状态点（呼吸/闪烁）+ 名称（居中）
+ * │   -- ms     │  ← 数值（居中，逐字滚动）
+ * │ ⌒‿⌒‿⌒̇      │  ← Mini sparkline（最近 [MAX_SPARK_POINTS] 次延迟历史）
  * └─────────────┘
  */
 @Composable
@@ -225,6 +221,17 @@ private fun LatencyChip(
         label = "home_latency_value_$label"
     )
 
+    // ── 呼吸脉冲（B1）：Fast/Medium 慢呼吸；Testing 快闪；其它静止 ──
+    val pulseScale by rememberLatencyPulseScale(severity, label)
+
+    // ── Sparkline 历史（B1）：每次解析成功的毫秒数 push 入采样窗口 ──
+    val history = remember { mutableStateListOf<Float>() }
+    LaunchedEffect(value, loading) {
+        val ms = parseLatencyMillis(value, loading) ?: return@LaunchedEffect
+        history.add(ms)
+        while (history.size > MAX_SPARK_POINTS) history.removeAt(0)
+    }
+
     Column(
         modifier = modifier.padding(horizontal = 4.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -237,7 +244,13 @@ private fun LatencyChip(
         ) {
             Box(
                 modifier = Modifier
-                    .size(6.dp)
+                    .size(7.dp)
+                    .graphicsLayer {
+                        scaleX = pulseScale
+                        scaleY = pulseScale
+                        // 呼吸时 alpha 同步起伏，强化"脉搏"感（仅缩放变化时生效）
+                        alpha = if (pulseScale != 1f) 0.55f + 0.45f * pulseScale else 1f
+                    }
                     .clip(Capsule())
                     .background(animatedDotColor)
             )
@@ -250,129 +263,123 @@ private fun LatencyChip(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        // 数值：逐字符滚动动画
-        RollingLatencyText(
+        // 数值：逐字符滚动动画（通用 RollingNumberText 组件）
+        RollingNumberText(
             text = normalizeLatency(value),
             style = MiuixTheme.textStyles.body1,
             color = animatedValueColor
         )
+        // Mini sparkline（≥ 2 采样点才绘制；不足时占位防止抖动）
+        if (history.size >= 2) {
+            LatencySparkline(
+                values = history.toList(),
+                color = animatedDotColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(14.dp)
+                    .padding(horizontal = 2.dp)
+            )
+        } else {
+            Spacer(modifier = Modifier.height(14.dp))
+        }
     }
 }
 
-/** 从延迟字符串里拆出领先的数字部分（"123 ms" → 123），无法解析返回 null */
-private fun parseLatencyNumber(text: String): Int? =
-    Regex("""([0-9]+)""").find(text)?.groupValues?.getOrNull(1)?.toIntOrNull()
+// ── B1 helpers ─────────────────────────────────────────────────────────────
 
-/**
- * 延迟数值动画 — 增强版「翻牌 + 弹簧 + 脉冲」组合：
- *
- * 1. **整体方向**：用前后两次完整数值（而非单字符）推断升/降，所有位数同向滚动，
- *    解决了 199→200 时各位方向冲突造成的"乱跳"
- * 2. **弹簧物理**：滑动用 `spring`（中等刚度 + 阻尼 0.78）替代线性 tween，更有"卷轴"质感
- * 3. **级联**：每位 28ms × index 的 fadeIn 延迟，呈现轻微"波浪"刷新感
- * 4. **宽度形变**：`Modifier.animateContentSize` 平滑过渡字符数变化（如 99→100）
- * 5. **到达脉冲**：值更新后整个数字组缩放 0.94→1.0 弹回，强化"读取到新数据"的反馈
- * 6. **空闲免动**：相同字符不触发 transition；测试态 / 失败态等非数字串走 fadeIn/fadeOut
- */
+private const val MAX_SPARK_POINTS = 12
+
+/** 从延迟字符串提取毫秒数；loading / "..." / "-" 返回 null */
+private fun parseLatencyMillis(value: String, loading: Boolean): Float? {
+    if (loading) return null
+    val trimmed = value.trim()
+    if (trimmed.isBlank() || trimmed == "-" || trimmed == "—" || trimmed == "...") return null
+    return Regex("""([0-9]+(?:\.[0-9]+)?)""")
+        .find(trimmed)?.groupValues?.getOrNull(1)?.toFloatOrNull()
+}
+
+/** 状态点呼吸缩放：Fast/Medium 1500ms；Testing 800ms；其它返回静止常量 1f */
 @Composable
-private fun RollingLatencyText(
-    text: String,
-    style: androidx.compose.ui.text.TextStyle,
-    color: Color
-) {
-    // 跟踪上一次完整文本，用于推断「整体升/降」
-    var prevText by remember { mutableStateOf(text) }
-    val direction: Int = remember(text, prevText) {
-        val curr = parseLatencyNumber(text)
-        val prev = parseLatencyNumber(prevText)
-        when {
-            curr == null || prev == null -> 0     // 无法判定 → 中性（默认升）
-            curr > prev -> +1                       // 数值上升
-            curr < prev -> -1                       // 数值下降
-            else -> 0
-        }
+private fun rememberLatencyPulseScale(
+    severity: LatencySeverity,
+    label: String
+): State<Float> {
+    val durationMs = when (severity) {
+        LatencySeverity.Fast, LatencySeverity.Medium -> 1500
+        LatencySeverity.Testing -> 800
+        else -> 0
     }
-    LaunchedEffect(text) { prevText = text }
+    if (durationMs == 0) {
+        return remember { mutableStateOf(1f) }
+    }
+    val transition = rememberInfiniteTransition(label = "latency_pulse_${label}_transition")
+    return transition.animateFloat(
+        initialValue = 0.65f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMs, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "latency_pulse_$label"
+    )
+}
 
-    // 到达后的轻微脉冲（缩放）
-    val pulse = remember { Animatable(1f) }
-    LaunchedEffect(text) {
-        pulse.snapTo(0.94f)
-        pulse.animateTo(
-            targetValue = 1f,
-            animationSpec = spring(dampingRatio = 0.55f, stiffness = Spring.StiffnessMedium)
+/** Mini sparkline — 用最大-最小归一化，留 7.5% 上下边距，端点亮色 */
+@Composable
+private fun LatencySparkline(
+    values: List<Float>,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier) {
+        if (values.size < 2) return@Canvas
+        val w = size.width
+        val h = size.height
+        val maxVal = (values.maxOrNull() ?: return@Canvas).coerceAtLeast(1f)
+        val minVal = (values.minOrNull() ?: return@Canvas).coerceAtMost(maxVal)
+        val range = (maxVal - minVal).coerceAtLeast(1f)
+        val stepX = w / (values.size - 1).coerceAtLeast(1)
+        val topPad = h * 0.075f
+        val bottomPad = h * 0.075f
+        val drawH = h - topPad - bottomPad
+        val pts = values.mapIndexed { i, v ->
+            val x = i * stepX
+            val norm = (v - minVal) / range
+            // 延迟越低越好 → 越靠下方（视觉上"贴底" = 网络通畅）
+            val y = topPad + (1f - norm) * drawH
+            Offset(x, y)
+        }
+        val strokeWidthPx = 1.5.dp.toPx()
+        val path = Path().apply {
+            moveTo(pts.first().x, pts.first().y)
+            for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
+        }
+        // 折线（半透明）
+        drawPath(
+            path = path,
+            color = color.copy(alpha = 0.55f),
+            style = Stroke(
+                width = strokeWidthPx,
+                cap = StrokeCap.Round,
+                join = StrokeJoin.Round
+            )
+        )
+        // 末位端点（强调"当前值"）
+        drawCircle(
+            color = color,
+            radius = 2.dp.toPx(),
+            center = pts.last()
         )
     }
-
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
-            .graphicsLayer {
-                scaleX = pulse.value
-                scaleY = pulse.value
-            }
-            .animateContentSize(
-                animationSpec = spring(
-                    stiffness = Spring.StiffnessMediumLow,
-                    dampingRatio = 0.85f
-                )
-            )
-    ) {
-        text.forEachIndexed { index, char ->
-            AnimatedContent(
-                targetState = char,
-                transitionSpec = {
-                    val prev = initialState
-                    val curr = targetState
-                    val bothDigits = prev.isDigit() && curr.isDigit()
-                    if (bothDigits) {
-                        // 整体方向；若不可判定则退回单位数字比较
-                        val up = when {
-                            direction > 0 -> true
-                            direction < 0 -> false
-                            else -> curr.digitToInt() >= prev.digitToInt()
-                        }
-                        // 上升：新数字从下方滑入；下降：从上方滑入
-                        val enterFrom: Int = if (up) +1 else -1
-                        val exitTo: Int = if (up) -1 else +1
-                        val slideSpec = spring<IntOffset>(
-                            stiffness = Spring.StiffnessMediumLow,
-                            dampingRatio = 0.78f
-                        )
-                        // 级联：每位错开少量时间，多位数字呈"波浪"感
-                        val stagger = (index * 28).coerceAtMost(140)
-                        val fadeInSpec = tween<Float>(
-                            durationMillis = 220,
-                            delayMillis = stagger,
-                            easing = FastOutSlowInEasing
-                        )
-                        val fadeOutSpec = tween<Float>(
-                            durationMillis = 200,
-                            easing = FastOutSlowInEasing
-                        )
-                        (slideInVertically(slideSpec) { it * enterFrom } + fadeIn(fadeInSpec))
-                            .togetherWith(
-                                slideOutVertically(slideSpec) { it * exitTo } + fadeOut(fadeOutSpec)
-                            )
-                    } else {
-                        fadeIn(tween(180)).togetherWith(fadeOut(tween(180)))
-                    }
-                },
-                label = "rolling_digit_$index"
-            ) { ch ->
-                Text(
-                    text = ch.toString(),
-                    style = style,
-                    fontFamily = AppFonts.dataFamily,
-                    fontWeight = FontWeight.SemiBold,
-                    color = color,
-                    maxLines = 1
-                )
-            }
-        }
-    }
 }
 
+/**
+ * 延迟数值动画 — 已抽取为通用 [RollingNumberText]（见同包 RollingNumberText.kt）。
+ * 此处保留 LatencyChip 的"严重度配色 + 状态点脉冲"逻辑，数字渲染走通用实现。
+ *
+ * 通用组件仍提供「整体方向 / 弹簧 / 级联 / 宽度形变 / 到达脉冲 / 空闲免动」六大特性，
+ * 适用于所有 dataFamily 数字（网速、订阅、系统指标、延迟）。
+ */
 @Composable
 private fun latencyDotColor(severity: LatencySeverity): Color {
     val scheme = MiuixTheme.colorScheme
