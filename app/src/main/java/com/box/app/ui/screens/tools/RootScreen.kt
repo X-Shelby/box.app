@@ -353,8 +353,9 @@ fun ToolsRootScreen(
         listState = listState,
         navigationIcon = {} // Tools 是底部 tab 页面，不需要返回按钮
     ) {
-            // ─── 配置管理 ──────────────────────────────────────────
-            item {
+            // ═══ 配置 ═══════════════════════════════════════════════════
+            // 配置文件管理与活动配置选择
+            item("section_config") {
                 PreferenceSection(title = stringResource(R.string.tools_section_config_title)) {
                     ArrowPreference(
                         title = stringResource(R.string.tools_row_manage),
@@ -372,44 +373,67 @@ fun ToolsRootScreen(
                 }
             }
 
-            // ─── 应用管理 ──────────────────────────────────────────
-            item {
-                PreferenceSection(title = stringResource(R.string.tools_section_apps_title)) {
+            // ═══ 规则与数据 ═════════════════════════════════════════════
+            // 应用代理 / 网络控制 / SmartDNS / CNIP — 都属于「访问规则」
+            // 而非「模块更新」。CNIP 之前混在 Updates 里语义不清，移到此处
+            item("section_rules") {
+                PreferenceSection(title = stringResource(R.string.tools_section_rules_title)) {
                     ArrowPreference(
-                        title = stringResource(R.string.tools_row_manage),
+                        title = stringResource(R.string.tools_section_apps_title),
                         summary = stringResource(R.string.tools_row_manage_app_rules),
                         startAction = { PreferenceIcon(Icons.Filled.Apps) },
                         onClick = onOpenApps
                     )
-                }
-            }
-
-            // ─── 网络控制 ──────────────────────────────────────────
-            item {
-                PreferenceSection(title = stringResource(R.string.tools_section_network_control_title)) {
+                    PreferenceDivider()
                     ArrowPreference(
-                        title = stringResource(R.string.tools_row_open),
+                        title = stringResource(R.string.tools_section_network_control_title),
                         summary = stringResource(R.string.tools_row_network_control_subtitle),
                         startAction = { PreferenceIcon(Icons.Filled.Router) },
                         onClick = onOpenNetworkControl
                     )
+                    PreferenceDivider()
+                    ArrowPreference(
+                        title = "SmartDNS",
+                        summary = stringResource(R.string.smartdns_entry_subtitle),
+                        startAction = { PreferenceIcon(Icons.Filled.Dns) },
+                        onClick = onOpenSmartDns
+                    )
+                    if (BuildConfig.FLAVOR != "bfr") {
+                        PreferenceDivider()
+                        ArrowPreference(
+                            title = stringResource(R.string.tools_update_target_cnip),
+                            summary = stringResource(R.string.tools_row_cnip_subtitle),
+                            startAction = { PreferenceIcon(Icons.Filled.Public) },
+                            onClick = onOpenUpdateCnip
+                        )
+                    }
                 }
             }
 
-            // ─── 日志 ──────────────────────────────────────────────
-            item {
-                PreferenceSection(title = stringResource(R.string.tools_section_logs_title)) {
+            // ═══ 诊断 ═══════════════════════════════════════════════════
+            // 日志查看 + 监控守护 — 系统状态观测与守护策略
+            item("section_diagnose") {
+                PreferenceSection(title = stringResource(R.string.tools_section_diagnose_title)) {
                     ArrowPreference(
-                        title = stringResource(R.string.tools_row_view),
+                        title = stringResource(R.string.tools_section_logs_title),
                         summary = stringResource(R.string.tools_row_open_unified_logs),
                         startAction = { PreferenceIcon(Icons.AutoMirrored.Filled.Article) },
                         onClick = onOpenLogs
                     )
+                    PreferenceDivider()
+                    ArrowPreference(
+                        title = stringResource(R.string.monitor_title),
+                        summary = stringResource(R.string.monitor_subtitle),
+                        startAction = { PreferenceIcon(Icons.Filled.Shield) },
+                        onClick = onOpenMonitorSettings
+                    )
                 }
             }
 
-            // ─── 更新 ──────────────────────────────────────────────
-            item {
+            // ═══ 更新 ═══════════════════════════════════════════════════
+            // 模块产物级更新：核心 / 订阅 / WebUI
+            // CNIP 数据集已移至「规则与数据」（自带"立即更新"顶部 action）
+            item("section_update") {
                 PreferenceSection(title = stringResource(R.string.tools_section_update_title)) {
                     ArrowPreference(
                         title = stringResource(R.string.tools_update_target_core),
@@ -478,59 +502,6 @@ fun ToolsRootScreen(
                             )
                         },
                         onClick = {}
-                    )
-
-                    if (BuildConfig.FLAVOR != "bfr") {
-                        PreferenceDivider()
-                        ArrowPreference(
-                            title = stringResource(R.string.tools_update_target_cnip),
-                            summary = stringResource(R.string.tools_update_subtitle_cnip),
-                            startAction = { PreferenceIcon(Icons.Filled.Public) },
-                            endActions = {
-                                ActionText(
-                                    text = stringResource(R.string.action_update),
-                                    onClick = {
-                                        scope.launch {
-                                            toastMessage = context.getString(
-                                                R.string.tools_update_started,
-                                                context.getString(R.string.tools_update_target_cnip)
-                                            )
-                                            val success = BoxApi.updateCnipList()
-                                            toastMessage = if (success) {
-                                                context.getString(R.string.tools_update_completed_cnip)
-                                            } else {
-                                                context.getString(R.string.tools_update_failed)
-                                            }
-                                        }
-                                    }
-                                )
-                            },
-                            onClick = onOpenUpdateCnip
-                        )
-                    }
-                }
-            }
-
-            // ─── 监控守护 ──────────────────────────────────────────
-            item {
-                PreferenceSection(title = stringResource(R.string.monitor_title)) {
-                    ArrowPreference(
-                        title = stringResource(R.string.monitor_title),
-                        summary = stringResource(R.string.monitor_subtitle),
-                        startAction = { PreferenceIcon(Icons.Filled.Shield) },
-                        onClick = onOpenMonitorSettings
-                    )
-                }
-            }
-
-            // ─── SmartDNS ──────────────────────────────────────────
-            item {
-                PreferenceSection(title = "SmartDNS") {
-                    ArrowPreference(
-                        title = "SmartDNS",
-                        summary = stringResource(R.string.smartdns_entry_subtitle),
-                        startAction = { PreferenceIcon(Icons.Filled.Dns) },
-                        onClick = onOpenSmartDns
                     )
                 }
             }

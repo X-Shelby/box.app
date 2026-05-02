@@ -4,17 +4,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.automirrored.outlined.InsertDriveFile
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Sync
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -25,28 +28,33 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.box.app.R
 import com.box.app.data.backend.BoxApi
 import com.box.app.ui.components.ErrorToast
-import com.box.app.ui.components.contentPaddingWithNavBars
-import dev.lackluster.hyperx.ui.component.Hint
-import dev.lackluster.hyperx.ui.component.ImageIcon
-import dev.lackluster.hyperx.ui.preference.EditTextPreference
-import dev.lackluster.hyperx.ui.preference.ValuePosition
+import com.box.app.ui.components.LocalFloatingNavBarSpaceDp
+import com.box.app.ui.theme.AppFonts
+import com.box.app.utils.ThemeManager
+import dev.lackluster.hyperx.ui.dialog.EditTextDialog
+import dev.lackluster.hyperx.ui.layout.HyperXPage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
+import top.yukonga.miuix.kmp.basic.BasicComponent
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.IconButton
-import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
-import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.InfiniteProgressIndicator
 import top.yukonga.miuix.kmp.basic.SmallTitle
-import top.yukonga.miuix.kmp.basic.SmallTopAppBar
+import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.preference.SwitchPreference
+import top.yukonga.miuix.kmp.shapes.SmoothRoundedCornerShape
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -60,6 +68,17 @@ fun ToolsUpdateSubscriptionScreen(
     )
 }
 
+/**
+ * CNIP 中国 IP 数据库（二级页面）
+ *
+ * 设计要点：
+ *   - HyperXPage 顶栏右上 action 提供「立即更新」按钮（更新中显示进度环）
+ *   - 启用 / 数据 / 来源三大分区，每条目用 IPv4/IPv6 颜色徽章 + outlined 图标
+ *   - 路径与 URL 用 IBM Plex Mono 数据字体；图标 tint = onSurfaceSecondary，
+ *     完美适配深浅模式（旧版 ImageIcon 用 Image 渲染，深色下 Material 默认黑色 vector
+ *     不可见 — 已改用 miuix Icon 自动跟随主题）
+ *   - 点击行弹出 hyperx EditTextDialog，与项目其他设置项交互一致
+ */
 @Composable
 fun ToolsUpdateCnipScreen(
     onNavVisibilityChange: (Boolean) -> Unit,
@@ -68,10 +87,12 @@ fun ToolsUpdateCnipScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val listState = rememberLazyListState()
-    val scrollBehavior = MiuixScrollBehavior()
+    val scheme = MiuixTheme.colorScheme
+    val isDark = ThemeManager.shouldUseDarkTheme()
 
-    // ── 状态 ──
+    // ── 状态 ────────────────────────────────────────────────────────────
     var loading by remember { mutableStateOf(true) }
+    var updating by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
     var bypassCnIp by remember { mutableStateOf(false) }
@@ -83,13 +104,12 @@ fun ToolsUpdateCnipScreen(
     var cnIpUrl by remember { mutableStateOf("") }
     var cnIpv6Url by remember { mutableStateOf("") }
 
-    // ── 解析工具 ──
+    // ── 解析 / 写入辅助 ──────────────────────────────────────────────────
     fun parseSetting(settings: String, key: String): String? {
         val regex = Regex("^${key}=\"?(.*?)\"?$", setOf(RegexOption.MULTILINE))
         return regex.find(settings)?.groupValues?.getOrNull(1)
     }
 
-    // ── 写入辅助 ──
     fun writeBool(key: String, value: Boolean) {
         scope.launch { runCatching { BoxApi.updateBooleanSetting(key, value) } }
     }
@@ -98,13 +118,9 @@ fun ToolsUpdateCnipScreen(
         scope.launch { runCatching { BoxApi.updateSetting(key, value.trim()) } }
     }
 
-    // ── 错误提示 ──
-    ErrorToast(
-        message = error,
-        onConsumed = { error = null }
-    )
+    ErrorToast(message = error, onConsumed = { error = null })
 
-    // ── 加载设置 ──
+    // ── 加载 settings.ini ────────────────────────────────────────────────
     LaunchedEffect(Unit) {
         loading = true
         error = null
@@ -123,7 +139,7 @@ fun ToolsUpdateCnipScreen(
         loading = false
     }
 
-    // ── 滚动隐藏导航栏 ──
+    // ── 滚动隐藏导航栏 ───────────────────────────────────────────────────
     LaunchedEffect(listState) {
         var last = listState.firstVisibleItemIndex * 10_000 + listState.firstVisibleItemScrollOffset
         snapshotFlow { listState.firstVisibleItemIndex * 10_000 + listState.firstVisibleItemScrollOffset }
@@ -135,190 +151,352 @@ fun ToolsUpdateCnipScreen(
             }
     }
 
-    // ── 页面布局 ──
-    Scaffold(
-        topBar = {
-            SmallTopAppBar(
-                title = stringResource(R.string.tools_update_target_cnip),
-                subtitle = stringResource(R.string.tools_update_subtitle_cnip),
-                scrollBehavior = scrollBehavior,
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
+    // ── 顶部更新按钮回调 ─────────────────────────────────────────────────
+    val updateStartedText = stringResource(
+        R.string.tools_update_started,
+        stringResource(R.string.tools_update_target_cnip)
+    )
+    val updateOkText = stringResource(R.string.tools_update_completed_cnip)
+    val updateFailText = stringResource(R.string.tools_update_failed)
+
+    fun triggerUpdate() {
+        if (updating) return
+        updating = true
+        error = updateStartedText
+        scope.launch {
+            val ok = runCatching { BoxApi.updateCnipList() }.getOrDefault(false)
+            error = if (ok) updateOkText else updateFailText
+            updating = false
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        HyperXPage(
+            title = stringResource(R.string.tools_update_target_cnip),
+            listState = listState,
+            navigationIcon = {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .padding(start = 21.dp)
+                        .size(40.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = null,
+                        tint = scheme.onSurface
+                    )
+                }
+            },
+            actions = {
+                IconButton(
+                    onClick = { triggerUpdate() },
+                    modifier = Modifier
+                        .padding(end = 21.dp)
+                        .size(40.dp)
+                ) {
+                    if (updating) {
+                        InfiniteProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            color = scheme.primary
+                        )
+                    } else {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = null,
-                            tint = MiuixTheme.colorScheme.onSurface
+                            imageVector = Icons.Outlined.Sync,
+                            contentDescription = stringResource(R.string.tools_cnip_action_update),
+                            tint = scheme.onSurface
                         )
                     }
                 }
-            )
-        }
-    ) { innerPadding ->
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(scrollBehavior.nestedScrollConnection),
-                contentPadding = contentPaddingWithNavBars(
-                    start = 12.dp, end = 12.dp,
-                    top = innerPadding.calculateTopPadding(),
-                    extraBottom = 12.dp
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // ═══ 提示 ═══
-                item(key = "hint_cnip") {
-                    Hint(text = stringResource(R.string.tools_cnip_ipset_hint))
+            }
+        ) {
+            // ═══ 状态提示 ═══════════════════════════════════════════════
+            item(key = "hint") {
+                Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)) {
+                    CnipStatusHint(scheme = scheme, isDark = isDark)
                 }
-
-                // ═══ General ═══
-                item(key = "section_general") {
-                    SmallTitle(text = stringResource(R.string.tools_cnip_section_general_title))
-                }
-                item(key = "card_general") {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 18.dp
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            SwitchPreference(
-                                checked = bypassCnIp,
-                                onCheckedChange = {
-                                    bypassCnIp = it
-                                    writeBool("bypass_cn_ip", it)
-                                },
-                                title = stringResource(R.string.tools_cnip_bypass_title),
-                                summary = stringResource(R.string.tools_cnip_bypass_subtitle)
-                            )
-                            CnipDivider()
-                            SwitchPreference(
-                                checked = bypassCnIpV4,
-                                onCheckedChange = {
-                                    bypassCnIpV4 = it
-                                    writeBool("bypass_cn_ip_v4", it)
-                                },
-                                title = stringResource(R.string.tools_cnip_bypass_ipv4_title),
-                                summary = stringResource(R.string.tools_cnip_bypass_ipv4_subtitle),
-                                enabled = bypassCnIp
-                            )
-                            CnipDivider()
-                            SwitchPreference(
-                                checked = bypassCnIpV6,
-                                onCheckedChange = {
-                                    bypassCnIpV6 = it
-                                    writeBool("bypass_cn_ip_v6", it)
-                                },
-                                title = stringResource(R.string.tools_cnip_bypass_ipv6_title),
-                                summary = stringResource(R.string.tools_cnip_bypass_ipv6_subtitle),
-                                enabled = bypassCnIp
-                            )
-                        }
-                    }
-                }
-
-                // ═══ Files ═══
-                item(key = "section_files") {
-                    SmallTitle(text = stringResource(R.string.tools_cnip_section_files_title))
-                }
-                item(key = "card_files") {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 18.dp
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            EditTextPreference(
-                                title = stringResource(R.string.tools_cnip_ipv4_file_title),
-                                text = cnIpFile,
-                                onTextChange = {
-                                    cnIpFile = it
-                                    writeString("cn_ip_file", it)
-                                },
-                                icon = ImageIcon(Icons.Filled.Description),
-                                summary = "cn_ip_file",
-                                valuePosition = ValuePosition.Summary,
-                                dialogTitle = stringResource(R.string.tools_cnip_ipv4_file_title),
-                                dialogHint = stringResource(R.string.tools_cnip_placeholder_path),
-                                enabled = bypassCnIp
-                            )
-                            CnipDivider()
-                            EditTextPreference(
-                                title = stringResource(R.string.tools_cnip_ipv6_file_title),
-                                text = cnIpv6File,
-                                onTextChange = {
-                                    cnIpv6File = it
-                                    writeString("cn_ipv6_file", it)
-                                },
-                                icon = ImageIcon(Icons.Filled.Description),
-                                summary = "cn_ipv6_file",
-                                valuePosition = ValuePosition.Summary,
-                                dialogTitle = stringResource(R.string.tools_cnip_ipv6_file_title),
-                                dialogHint = stringResource(R.string.tools_cnip_placeholder_path),
-                                enabled = bypassCnIp
-                            )
-                        }
-                    }
-                }
-
-                // ═══ Sources ═══
-                item(key = "section_sources") {
-                    SmallTitle(text = stringResource(R.string.tools_cnip_section_sources_title))
-                }
-                item(key = "card_sources") {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        cornerRadius = 18.dp
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            EditTextPreference(
-                                title = stringResource(R.string.tools_cnip_ipv4_url_title),
-                                text = cnIpUrl,
-                                onTextChange = {
-                                    cnIpUrl = it
-                                    writeString("cn_ip_url", it)
-                                },
-                                icon = ImageIcon(Icons.Filled.Link),
-                                summary = "cn_ip_url",
-                                valuePosition = ValuePosition.Summary,
-                                dialogTitle = stringResource(R.string.tools_cnip_ipv4_url_title),
-                                dialogHint = stringResource(R.string.tools_cnip_placeholder_url),
-                                enabled = bypassCnIp
-                            )
-                            CnipDivider()
-                            EditTextPreference(
-                                title = stringResource(R.string.tools_cnip_ipv6_url_title),
-                                text = cnIpv6Url,
-                                onTextChange = {
-                                    cnIpv6Url = it
-                                    writeString("cn_ipv6_url", it)
-                                },
-                                icon = ImageIcon(Icons.Filled.Link),
-                                summary = "cn_ipv6_url",
-                                valuePosition = ValuePosition.Summary,
-                                dialogTitle = stringResource(R.string.tools_cnip_ipv6_url_title),
-                                dialogHint = stringResource(R.string.tools_cnip_placeholder_url),
-                                enabled = bypassCnIp
-                            )
-                        }
-                    }
-                }
-
-                item { Spacer(modifier = Modifier.height(8.dp)) }
             }
 
-            // ── 加载遮罩 ──
-            if (loading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.CircularProgressIndicator(
-                        color = MiuixTheme.colorScheme.onSurface
+            // ═══ 启用 ═══════════════════════════════════════════════════
+            item(key = "section_general_title") {
+                SmallTitle(text = stringResource(R.string.tools_cnip_section_general_title))
+            }
+            item(key = "card_general") {
+                CnipCard {
+                    SwitchPreference(
+                        checked = bypassCnIp,
+                        onCheckedChange = {
+                            bypassCnIp = it
+                            writeBool("bypass_cn_ip", it)
+                        },
+                        title = stringResource(R.string.tools_cnip_bypass_title),
+                        summary = stringResource(R.string.tools_cnip_bypass_subtitle)
+                    )
+                    CnipDivider()
+                    SwitchPreference(
+                        checked = bypassCnIpV4,
+                        onCheckedChange = {
+                            bypassCnIpV4 = it
+                            writeBool("bypass_cn_ip_v4", it)
+                        },
+                        title = stringResource(R.string.tools_cnip_bypass_ipv4_title),
+                        summary = stringResource(R.string.tools_cnip_bypass_ipv4_subtitle),
+                        enabled = bypassCnIp
+                    )
+                    CnipDivider()
+                    SwitchPreference(
+                        checked = bypassCnIpV6,
+                        onCheckedChange = {
+                            bypassCnIpV6 = it
+                            writeBool("bypass_cn_ip_v6", it)
+                        },
+                        title = stringResource(R.string.tools_cnip_bypass_ipv6_title),
+                        summary = stringResource(R.string.tools_cnip_bypass_ipv6_subtitle),
+                        enabled = bypassCnIp
                     )
                 }
+            }
+
+            // ═══ 本地数据文件 ═══════════════════════════════════════════
+            item(key = "section_files_title") {
+                SmallTitle(text = stringResource(R.string.tools_cnip_section_files_title))
+            }
+            item(key = "card_files") {
+                CnipCard {
+                    CnipPathRow(
+                        isV6 = false,
+                        title = stringResource(R.string.tools_cnip_ipv4_file_title),
+                        value = cnIpFile,
+                        kind = CnipRowKind.File,
+                        dialogHint = stringResource(R.string.tools_cnip_placeholder_path),
+                        onValueChange = {
+                            cnIpFile = it
+                            writeString("cn_ip_file", it)
+                        },
+                        enabled = bypassCnIp,
+                        scheme = scheme,
+                        isDark = isDark
+                    )
+                    CnipDivider()
+                    CnipPathRow(
+                        isV6 = true,
+                        title = stringResource(R.string.tools_cnip_ipv6_file_title),
+                        value = cnIpv6File,
+                        kind = CnipRowKind.File,
+                        dialogHint = stringResource(R.string.tools_cnip_placeholder_path),
+                        onValueChange = {
+                            cnIpv6File = it
+                            writeString("cn_ipv6_file", it)
+                        },
+                        enabled = bypassCnIp,
+                        scheme = scheme,
+                        isDark = isDark
+                    )
+                }
+            }
+
+            // ═══ 数据来源 URL ═══════════════════════════════════════════
+            item(key = "section_sources_title") {
+                SmallTitle(text = stringResource(R.string.tools_cnip_section_sources_title))
+            }
+            item(key = "card_sources") {
+                CnipCard {
+                    CnipPathRow(
+                        isV6 = false,
+                        title = stringResource(R.string.tools_cnip_ipv4_url_title),
+                        value = cnIpUrl,
+                        kind = CnipRowKind.Url,
+                        dialogHint = stringResource(R.string.tools_cnip_placeholder_url),
+                        onValueChange = {
+                            cnIpUrl = it
+                            writeString("cn_ip_url", it)
+                        },
+                        enabled = bypassCnIp,
+                        scheme = scheme,
+                        isDark = isDark
+                    )
+                    CnipDivider()
+                    CnipPathRow(
+                        isV6 = true,
+                        title = stringResource(R.string.tools_cnip_ipv6_url_title),
+                        value = cnIpv6Url,
+                        kind = CnipRowKind.Url,
+                        dialogHint = stringResource(R.string.tools_cnip_placeholder_url),
+                        onValueChange = {
+                            cnIpv6Url = it
+                            writeString("cn_ipv6_url", it)
+                        },
+                        enabled = bypassCnIp,
+                        scheme = scheme,
+                        isDark = isDark
+                    )
+                }
+            }
+
+            item(key = "trailing_space") {
+                Spacer(Modifier.height(LocalFloatingNavBarSpaceDp.current + 12.dp))
+            }
+        }
+
+        // ── 加载遮罩 ────────────────────────────────────────────────────
+        if (loading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(scheme.surface.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                InfiniteProgressIndicator(
+                    modifier = Modifier.size(36.dp),
+                    color = scheme.primary
+                )
             }
         }
     }
 }
 
-// ─── 分隔线 ─────────────────────────────────────────────────────────────────
+// ─── 协议徽章（IPv4 绿 / IPv6 紫） ──────────────────────────────────────────
+
+@Composable
+private fun ProtocolBadge(
+    isV6: Boolean,
+    isDark: Boolean
+) {
+    val (bg, fg) = remember(isV6, isDark) {
+        when {
+            isV6 && isDark -> Color(0xFF6750A4).copy(alpha = 0.25f) to Color(0xFFD0BCFF)
+            isV6 && !isDark -> Color(0xFF7E57C2).copy(alpha = 0.16f) to Color(0xFF5E35B1)
+            !isV6 && isDark -> Color(0xFF2E7D32).copy(alpha = 0.28f) to Color(0xFFA5D6A7)
+            else -> Color(0xFF43A047).copy(alpha = 0.16f) to Color(0xFF2E7D32)
+        }
+    }
+    Box(
+        modifier = Modifier
+            .clip(SmoothRoundedCornerShape(6.dp))
+            .background(bg)
+            .padding(horizontal = 7.dp, vertical = 2.dp)
+    ) {
+        Text(
+            text = if (isV6) "v6" else "v4",
+            color = fg,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 11.sp,
+            fontFamily = AppFonts.dataFamily
+        )
+    }
+}
+
+// ─── 状态 Hint 卡片（替代蓝色 Hint，更柔和） ────────────────────────────────
+
+@Composable
+private fun CnipStatusHint(
+    scheme: top.yukonga.miuix.kmp.theme.Colors,
+    isDark: Boolean
+) {
+    val accent = if (isDark) Color(0xFF82B1FF) else Color(0xFF1565C0)
+    val bg = if (isDark) accent.copy(alpha = 0.15f) else accent.copy(alpha = 0.08f)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(SmoothRoundedCornerShape(16.dp))
+            .background(bg)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Info,
+            contentDescription = null,
+            tint = accent,
+            modifier = Modifier.size(20.dp)
+        )
+        Text(
+            text = stringResource(R.string.tools_cnip_ipset_hint),
+            style = MiuixTheme.textStyles.body2,
+            color = scheme.onSurface.copy(alpha = 0.85f),
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+// ─── 卡片容器（圆角 + onSurface tint） ──────────────────────────────────────
+
+@Composable
+private fun CnipCard(content: @Composable () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp),
+        cornerRadius = 18.dp
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            content()
+        }
+    }
+}
+
+// ─── 行类型 ──────────────────────────────────────────────────────────────
+
+private enum class CnipRowKind { File, Url }
+
+// ─── 文件 / URL 行（点击弹 EditTextDialog） ─────────────────────────────────
+
+@Composable
+private fun CnipPathRow(
+    isV6: Boolean,
+    title: String,
+    value: String,
+    kind: CnipRowKind,
+    dialogHint: String,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean,
+    scheme: top.yukonga.miuix.kmp.theme.Colors,
+    isDark: Boolean
+) {
+    var showDialog by remember { mutableStateOf(false) }
+    val icon = when (kind) {
+        CnipRowKind.File -> Icons.AutoMirrored.Outlined.InsertDriveFile
+        CnipRowKind.Url -> Icons.Outlined.Link
+    }
+
+    BasicComponent(
+        title = title,
+        // summary 显示当前真实值；空值时退化为 placeholder
+        summary = value.takeIf { it.isNotBlank() } ?: dialogHint,
+        enabled = enabled,
+        startAction = {
+            Row(
+                modifier = Modifier.padding(end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                ProtocolBadge(isV6 = isV6, isDark = isDark)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (enabled) scheme.onSurfaceSecondary
+                    else scheme.onSurfaceSecondary.copy(alpha = 0.4f),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        },
+        onClick = if (enabled) {
+            { showDialog = true }
+        } else null
+    )
+
+    EditTextDialog(
+        visible = showDialog,
+        title = title,
+        initialText = value,
+        hint = dialogHint,
+        onConfirm = { newText -> onValueChange(newText) },
+        onDismissRequest = { showDialog = false }
+    )
+}
+
+// ─── 分隔线 ─────────────────────────────────────────────────────────────
 
 @Composable
 private fun CnipDivider() {

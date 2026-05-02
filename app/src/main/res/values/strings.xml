@@ -464,6 +464,15 @@
     <string name="tools_section_logs_subtitle">Inspect runtime logs</string>
     <string name="tools_section_update_title">Update</string>
     <string name="tools_section_update_subtitle">Module content update</string>
+    <string name="tools_section_rules_title">Rules &amp; Data</string>
+    <string name="tools_section_rules_subtitle">Apps / Network / DNS / IP database</string>
+    <string name="tools_section_diagnose_title">Diagnostics</string>
+    <string name="tools_section_diagnose_subtitle">Logs &amp; monitor</string>
+    <string name="tools_row_open_cnip">Open</string>
+    <string name="tools_row_cnip_subtitle">CN IP database &amp; bypass rules</string>
+    <string name="tools_cnip_action_update">Update now</string>
+    <string name="tools_cnip_data_path_summary">Data path</string>
+    <string name="tools_cnip_url_summary">Download source</string>
 
     <string name="tools_row_manage">Manage</string>
     <string name="tools_row_select">Select</string>
