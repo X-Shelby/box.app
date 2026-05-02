@@ -53,7 +53,8 @@ HyperCeiler-main/
 .tmp/
 
 # Local data and packaged outputs
-data/
+# 注意：用 /data/ 锁根目录，避免误伤 app/src/main/java/com/box/app/data/
+/data/
 boxapp.zip
 deps.txt
 sonobat.db
